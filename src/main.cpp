@@ -93,6 +93,7 @@ $on_mod(Loaded) {
       }
     }
     Mod::get()->setSavedValue<int>("settings-audio-id-2"_spr, default_desktop_id);
+    Mod::get()->setSavedValue<int>("settings-length"_spr, 300);
   }
 
   Mod::get()->setSavedValue<bool>("is-recording"_spr, false);
