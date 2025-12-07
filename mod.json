@@ -11,6 +11,10 @@
 	"version": "v1.0.0",
 	"developer": "wint0r",
 	"description": "An implementation of Replay Buffer.",
+	"tags": [ "offline", "universal" ],
+	"links": {
+		"source": "https://github.com/wint0r/ReplayBuffer"
+	},
 	"settings": {
 		"output-dir": {
 			"type": "folder",
