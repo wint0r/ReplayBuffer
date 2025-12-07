@@ -18,11 +18,6 @@ PixelBufferManager::~PixelBufferManager() {
 }
 
 void PixelBufferManager::capture_frame() {
-  // glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos[pbo_idx]);
-  // glReadPixels(0, 0, this->frame_size.width, this->frame_size.height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-  // glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-  // prev_pbo_idx = this->pbo_idx;
-  // pbo_idx = (pbo_idx + 1) % PBO_AMOUNT;
   glBindBuffer(GL_PIXEL_PACK_BUFFER, this->pbos[this->pbo_idx]);
   glReadPixels(0, 0, this->frame_size.width, this->frame_size.height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
   glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -64,22 +59,3 @@ void PixelBufferManager::unlock_frame() {
 uint8_t * PixelBufferManager::get_current_frame() {
   return this->last_frame_data.data();
 }
-
-// uint8_t *PixelBufferManager::get_current_frame() {
-//   glBindBuffer(GL_PIXEL_PACK_BUFFER, pbos[prev_pbo_idx]);
-//   auto *data = static_cast<uint8_t *>(glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY));
-//   if (data == nullptr) {
-//     Frame *frame = new Frame();
-//     frame->frame_size = this->frame_size;
-//     frame->frame_data.assign(last_frame_data.begin(), last_frame_data.end());
-//     return frame;
-//   }
-//
-//   Frame *frame = new Frame();
-//   frame->frame_size = this->frame_size;
-//   frame->frame_data.assign(data, data + this->buffer_size);
-//   last_frame_data.assign(data, data + this->buffer_size);
-//   glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-//   glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
-//   return frame;
-// }

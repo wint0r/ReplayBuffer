@@ -193,7 +193,7 @@ geode::Result<> ReplayBuffer::save_to_file(const std::filesystem::path &filename
 
     pkt->stream_index = new_stream_idx;
 
-    if ((ret = av_interleaved_write_frame(out_ctx, pkt)) < 0) {
+    if (av_interleaved_write_frame(out_ctx, pkt) < 0) {
       av_packet_free(&pkt);
       break;
     }
