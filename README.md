@@ -14,6 +14,7 @@ and then build and install with `cmake --build .`
 ## Installation
 It's not on the Geode index yet, but hopefully soon.
 
-## Possible Issues
+## Known Issues
 - Any platform other than Windows is not supported right now
 - It's kinda unoptimised
+- The UI sucks
