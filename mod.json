@@ -1,0 +1,21 @@
+{
+	"geode": "4.10.0",
+	"gd": {
+		"win": "2.2074",
+		"android": "2.2074",
+		"mac": "2.2074",
+		"ios": "2.2074"
+	},
+	"id": "wint0r.replaybuffer",
+	"name": "ReplayBuffer",
+	"version": "v1.0.0",
+	"developer": "wint0r",
+	"description": "An implementation of Replay Buffer.",
+	"settings": {
+		"output-dir": {
+			"type": "folder",
+			"name": "Output Folder",
+			"default": "{temp_dir}"
+		}
+	}
+}

@@ -1,0 +1,6 @@
+[requires]
+ffmpeg/8.0.1
+libx265/3.4
+[generators]
+CMakeDeps
+CMakeToolchain
