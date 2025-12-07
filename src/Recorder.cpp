@@ -42,7 +42,7 @@ Result<> Recorder::start() {
       return Err("error while initialising microphone audio recorder/ffmpeg: {}", res.err());
     }
 
-    replay_buffer = std::make_shared<ReplayBuffer>(Mod::get()->getSavedValue<int>("settings-length"));
+    replay_buffer = std::make_shared<ReplayBuffer>(Mod::get()->getSavedValue<int>("settings-length") * 1000);
     recorder->init_hook();
     this->first_init = true;
   } else {
