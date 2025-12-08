@@ -84,6 +84,8 @@ class $modify(ReplayBuffer_EditLevelLayer, EditLevelLayer) {
       menu->addChild(button);
       menu->updateLayout();
     }
+
+    return true;
   }
 
   void onClipButton(CCObject *) {
@@ -105,6 +107,8 @@ class $modify(ReplayBuffer_LevelInfoLayer, LevelInfoLayer) {
       menu->addChild(button);
       menu->updateLayout();
     }
+
+    return true;
   }
 
   void onClipButton(CCObject *) {
