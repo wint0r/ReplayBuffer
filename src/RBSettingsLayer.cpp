@@ -193,8 +193,8 @@ void RBSettingsLayer::onRecordButton(CCObject *sender) {
 }
 
 void RBSettingsLayer::onHWAccelToggle(CCObject *sender) {
-  auto *toggle = geode::cast::typeinfo_cast<CCMenuItemToggler *>(sender);
-  toggle->toggle(!toggle->isToggled());
+  // auto *toggle = geode::cast::typeinfo_cast<CCMenuItemToggler *>(sender);
+  // toggle->toggle(!toggle->isToggled());
 }
 
 void RBSettingsLayer::onSaveSettings(CCObject *sender) {

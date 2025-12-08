@@ -169,17 +169,17 @@ geode::Result<> VideoRecorder::init_av(int width, int height, int framerate, boo
   this->av_codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
   this->av_codec_ctx->time_base = {1, framerate};
   this->av_codec_ctx->framerate = {framerate, 1};
-  this->av_codec_ctx->gop_size = 120;
-  this->av_codec_ctx->max_b_frames = 3;
+  this->av_codec_ctx->gop_size = 60;
+  this->av_codec_ctx->max_b_frames = 1;
   if (!this->using_hw_accel) {
     av_opt_set(this->av_codec_ctx->priv_data, "tune", "zerolatency", 0);
     av_opt_set(this->av_codec_ctx->priv_data, "preset", "ultrafast", 0);
   } else {
     if (this->available_hw_encoder.ends_with("nvenc")) {
-      av_opt_set(this->av_codec_ctx->priv_data, "preset", "p1", 0);
+      av_opt_set(this->av_codec_ctx->priv_data, "preset", "p3", 0);
       av_opt_set(this->av_codec_ctx->priv_data, "tune", "ull", 0);
     } else if (this->available_hw_encoder.ends_with("amf")) {
-      av_opt_set(this->av_codec_ctx->priv_data, "usage", "ultralowlatency", 0);
+      av_opt_set(this->av_codec_ctx->priv_data, "usage", "webcam", 0);
       av_opt_set(this->av_codec_ctx->priv_data, "preset", "speed", 0);
     } else if (this->available_hw_encoder.ends_with("qsv")) {
       av_opt_set(this->av_codec_ctx->priv_data, "preset", "veryfast", 0);

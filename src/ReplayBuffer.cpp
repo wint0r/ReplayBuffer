@@ -1,4 +1,5 @@
 #include "ReplayBuffer.hpp"
+#include <ranges>
 
 int64_t ReplayBuffer::pts_to_ms(int64_t pts, AVRational time_base) {
   return av_rescale_q(pts, time_base, AVRational{1, 1000});
@@ -7,6 +8,7 @@ int64_t ReplayBuffer::pts_to_ms(int64_t pts, AVRational time_base) {
 ReplayBuffer::ReplayBuffer(size_t max_duration) {
   this->max_duration = max_duration;
   this->video_stream_idx = -1;
+  geode::log::info("replay buffer started with {} seconds limit", max_duration / 1000);
 }
 
 ReplayBuffer::~ReplayBuffer() {
@@ -16,10 +18,10 @@ ReplayBuffer::~ReplayBuffer() {
 void ReplayBuffer::add_packet(AVPacket *pkt) {
   AVPacket* clone = av_packet_clone(pkt);
 
-  bool is_keyframe = (clone->flags & AV_PKT_FLAG_KEY) != 0;
+  bool is_keyframe = (pkt->flags & AV_PKT_FLAG_KEY);
   bool is_video = (pkt->stream_index == this->video_stream_idx);
 
-  int64_t timestamp_ms = pts_to_ms(clone->pts, this->time_bases[pkt->stream_index]);
+  int64_t timestamp_ms = pts_to_ms(pkt->pts, this->time_bases[pkt->stream_index]);
 
   std::lock_guard<std::mutex> lock(this->mutex);
   this->buffer.push_back({ clone, pkt->stream_index, is_keyframe && is_video, timestamp_ms });
@@ -62,7 +64,7 @@ void ReplayBuffer::trim_buffer() {
         first_keyframe_idx = i;
         found_keyframe = true;
       }
-      if (this->buffer[i].timestamp_ms >= cutoff_time) {
+      if (buffer[i].timestamp_ms >= cutoff_time) {
         break;
       }
     }
@@ -84,13 +86,12 @@ geode::Result<> ReplayBuffer::save_to_file(const std::filesystem::path &filename
     return geode::Err("empty buffer");
   }
 
-  size_t start_index = 0;
+  size_t video_start_idx = 0;
   bool found_keyframe = false;
 
-  av_log_set_level(AV_LOG_DEBUG);
   for (size_t i = 0; i < this->buffer.size(); i++) {
     if (this->buffer[i].is_keyframe) {
-      start_index = i;
+      video_start_idx = i;
       found_keyframe = true;
       break;
     }
@@ -136,76 +137,102 @@ geode::Result<> ReplayBuffer::save_to_file(const std::filesystem::path &filename
     avformat_free_context(out_ctx);
     char err_str[64];
     av_make_error_string(err_str, 64, ret);
-    return geode::Err("could not open codec, error: {}", err_str);
+    return geode::Err("could not write header, error: {}", err_str);
   }
 
-  int64_t start_timestamp_ms = this->buffer[start_index].timestamp_ms;
-  while (start_index > 0 && this->buffer[start_index - 1].timestamp_ms >= start_timestamp_ms - 100) {
-    start_index--;
-  }
-
-  std::map<int, int64_t> timestamp_offsets;
-  for (size_t i = start_index; i < this->buffer.size(); i++) {
-    int stream_idx = this->buffer[i].stream_idx;
-    if (!timestamp_offsets.contains(stream_idx)) {
-      AVPacket* pkt = this->buffer[i].packet;
-
-      int64_t pts = (pkt->pts != AV_NOPTS_VALUE) ? pkt->pts : 0;
-      int64_t dts = (pkt->dts != AV_NOPTS_VALUE) ? pkt->dts : pts;
-
-      timestamp_offsets[stream_idx] = std::min(pts, dts);
+  int64_t start_timestamp_ms = this->buffer[video_start_idx].timestamp_ms;
+  std::map<int, int64_t> start_indices;
+  std::map<int, std::vector<BufferedPacket>> packets_per_stream;
+  for (int64_t i = 0; i < this->buffer.size(); i++) {
+    auto &packet = this->buffer[i];
+    packets_per_stream[packet.stream_idx].push_back(packet);
+    bool is_within_limits_time = packet.timestamp_ms >= start_timestamp_ms;
+    bool is_within_limits_audio = (is_within_limits_time && packet.stream_idx != video_stream_idx);
+    bool is_within_limits_video = (is_within_limits_time && packet.is_keyframe);
+    bool is_within_limits = (is_within_limits_video || is_within_limits_audio);
+    if ((is_within_limits && start_indices.count(packet.stream_idx) == 0)
+      || (!is_within_limits_time && packet.is_keyframe)) {
+      start_indices[packet.stream_idx] = packets_per_stream[packet.stream_idx].size() - 1;
     }
   }
 
-  for (size_t i = start_index; i < this->buffer.size(); i++) {
-    AVPacket *orig_pkt = this->buffer[i].packet;
-    AVPacket *pkt = av_packet_clone(orig_pkt);
+  for (auto &[stream_idx, stream_buffer] : packets_per_stream) {
+    int64_t timestamp_offset;
 
-    int old_stream_idx = pkt->stream_index;
-    int new_stream_idx = stream_indices[old_stream_idx];
-    int64_t offset = timestamp_offsets[old_stream_idx];
-
-    if (pkt->pts != AV_NOPTS_VALUE) {
-      pkt->pts = orig_pkt->pts - offset;
+    auto filtered_buffer_pts = stream_buffer | std::views::filter([] (BufferedPacket &packet) { return packet.packet->pts != AV_NOPTS_VALUE; });
+    auto filtered_buffer_dts = stream_buffer | std::views::filter([] (BufferedPacket &packet) { return packet.packet->dts != AV_NOPTS_VALUE; });
+    auto pts_it = std::ranges::min_element(
+      filtered_buffer_pts,
+      [] (BufferedPacket &a, BufferedPacket &b) {
+        return a.packet->pts < b.packet->pts;
+      });
+    auto dts_it = std::ranges::min_element(
+      filtered_buffer_dts,
+      [] (BufferedPacket &a, BufferedPacket &b) {
+        return a.packet->dts < b.packet->dts;
+      });
+    if (dts_it->packet->dts == AV_NOPTS_VALUE) {
+      timestamp_offset = pts_it->packet->pts;
+    } else {
+      timestamp_offset = std::min(pts_it->packet->pts, dts_it->packet->dts);
     }
-    if (pkt->dts != AV_NOPTS_VALUE) {
-      pkt->dts = orig_pkt->dts - offset;
-    }
 
-    if (pkt->dts != AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE) {
-      if (pkt->dts > pkt->pts) {
+    for (size_t i = start_indices[stream_idx]; i < stream_buffer.size(); i++) {
+      AVPacket *orig_pkt = stream_buffer[i].packet;
+      AVPacket *pkt = av_packet_clone(orig_pkt);
+
+      int old_stream_idx = pkt->stream_index;
+      int new_stream_idx = stream_indices[old_stream_idx];
+      int64_t offset = timestamp_offset;
+
+      if (pkt->pts != AV_NOPTS_VALUE) {
+        pkt->pts = orig_pkt->pts - offset;
+      }
+      if (pkt->dts != AV_NOPTS_VALUE) {
+        pkt->dts = orig_pkt->dts - offset;
+      }
+
+      if (pkt->dts != AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE) {
+        if (pkt->dts > pkt->pts) {
+          pkt->dts = pkt->pts;
+        }
+      }
+
+      if (pkt->dts == AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE) {
         pkt->dts = pkt->pts;
       }
-    }
 
-    if (pkt->dts == AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE) {
-      pkt->dts = pkt->pts;
-    }
+      AVStream *out_stream = streams[old_stream_idx];
+      av_packet_rescale_ts(pkt, this->time_bases[old_stream_idx], out_stream->time_base);
 
-    AVStream *out_stream = streams[old_stream_idx];
-    av_packet_rescale_ts(pkt, time_bases[old_stream_idx], out_stream->time_base);
-
-    if (pkt->dts != AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE) {
-      if (pkt->dts > pkt->pts) {
-        pkt->dts = pkt->pts;
+      if (pkt->dts != AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE) {
+        if (pkt->dts > pkt->pts) {
+          pkt->dts = pkt->pts;
+        }
       }
-    }
 
-    pkt->stream_index = new_stream_idx;
+      pkt->stream_index = new_stream_idx;
 
-    if (av_interleaved_write_frame(out_ctx, pkt) < 0) {
+      if ((ret = av_interleaved_write_frame(out_ctx, pkt)) < 0) {
+        av_packet_free(&pkt);
+        break;
+      }
+
       av_packet_free(&pkt);
-      break;
     }
-
-    av_packet_free(&pkt);
   }
 
   av_write_trailer(out_ctx);
   avio_closep(&out_ctx->pb);
   avformat_free_context(out_ctx);
 
-  return geode::Ok();
+  if (ret >= 0) {
+    return geode::Ok();
+  } else {
+    char err_str[64];
+    av_make_error_string(err_str, 64, ret);
+    return geode::Err("could not write to file, error: {}", err_str);
+  }
 }
 
 void ReplayBuffer::clear() {
