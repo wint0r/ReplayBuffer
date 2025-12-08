@@ -53,6 +53,7 @@ void AudioRecorder::encoder_thread() {
 
   system->recordStop(this->fmod_driver_id);
   av_audio_fifo_free(fifo);
+  this->last_record_pos = 0;
 }
 
 AudioRecorder::AudioRecorder() {
@@ -67,7 +68,6 @@ AudioRecorder::AudioRecorder() {
   this->record_pos = 0;
   this->last_record_pos = 0;
   this->sound_length = -1;
-  this->captured_new_samples = false;
   this->is_encoder_running = false;
   this->max_out_samples = 0;
   this->stream_idx = 0;
@@ -118,7 +118,7 @@ geode::Result<> AudioRecorder::init(int device_id) {
   create_info.length = audio_sample_rate * sizeof(short) * this->audio_channels;
   FMOD_RESULT fmod_res = system->createSound(nullptr, FMOD_2D | FMOD_LOOP_NORMAL | FMOD_OPENUSER, &create_info, &this->fmod_sound);
   if (this->fmod_sound == nullptr) {
-    return geode::Err("failed to create sound, result={}", (int)fmod_res);
+    return geode::Err("failed to create sound, result={}", static_cast<int>(fmod_res));
   }
 
   this->sound_length = create_info.length;
@@ -245,9 +245,12 @@ void AudioRecorder::start_recording(std::shared_ptr<ReplayBuffer> &replay_buffer
 }
 
 void AudioRecorder::stop_recording() {
+  if (!this->is_encoder_running) {
+    return;
+  }
   FMODAudioEngine::sharedEngine()->m_system->recordStop(this->fmod_driver_id);
   this->is_encoder_running = false;
-  this->encoder_thread_obj.join();
+  //this->encoder_thread_obj.join();
 }
 
 void AudioRecorder::capture_samples() {

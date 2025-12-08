@@ -26,9 +26,6 @@ class VideoRecorder {
   AVFrame *av_frame;
   AVPacket *av_packet;
   SwsContext *sws_ctx;
-  std::deque<Frame *> frames;
-  std::mutex encoder_mutex;
-  std::condition_variable cv;
   bool is_encoder_running;
   std::thread encoder_thread_obj;
   double dt_accumulator;
@@ -38,7 +35,6 @@ class VideoRecorder {
   std::string available_hw_encoder;
 
   void encoder_thread();
-  void clear_frame_buffer();
   const AVCodec *get_codec();
   geode::Result<std::string> setup_hw_accel();
 
@@ -61,7 +57,6 @@ public:
   void init_hook();
   void start_recording(std::shared_ptr<ReplayBuffer> &replay_buffer);
   void stop_recording();
-  //void push_frame();
   bool is_recording() const;
 };
 

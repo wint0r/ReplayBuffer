@@ -28,9 +28,6 @@ class AudioRecorder {
   unsigned last_record_pos;
   int sound_length;
   std::shared_ptr<ReplayBuffer> replay_buffer;
-  std::mutex encoder_mutex;
-  std::condition_variable cv;
-  bool captured_new_samples;
   bool is_encoder_running;
   std::thread encoder_thread_obj;
   int max_out_samples;

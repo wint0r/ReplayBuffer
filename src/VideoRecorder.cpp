@@ -54,15 +54,6 @@ void VideoRecorder::encoder_thread() {
   }
 }
 
-void VideoRecorder::clear_frame_buffer() {
-  std::unique_lock<std::mutex> lock(this->encoder_mutex);
-  for (auto *frame : this->frames) {
-    delete frame;
-  }
-  this->frames.clear();
-  lock.unlock();
-}
-
 const AVCodec *VideoRecorder::get_codec() {
   if (this->using_hw_accel) {
     AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
@@ -280,8 +271,6 @@ void VideoRecorder::destroy_av() {
 void VideoRecorder::start_recording(std::shared_ptr<ReplayBuffer> &replay_buffer) {
   this->replay_buffer = replay_buffer;
   this->replay_buffer->add_stream(0, this->av_codec_ctx, true);
-
-  this->clear_frame_buffer();
   this->is_encoder_running = true;
   this->encoder_thread_obj = std::thread(&VideoRecorder::encoder_thread, this);
 }
@@ -292,8 +281,7 @@ void VideoRecorder::stop_recording() {
   }
 
   this->is_encoder_running = false;
-  this->clear_frame_buffer();
-  this->encoder_thread_obj.join();
+  //this->encoder_thread_obj.join();
 }
 
 bool VideoRecorder::is_recording() const {
