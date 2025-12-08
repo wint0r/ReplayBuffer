@@ -40,7 +40,7 @@ bool RBSettingsLayer::setup()  {
   label->setScale(0.5);
   this->m_mainLayer->addChild(label);
 
-  label = cocos2d::CCLabelBMFont::create("Framerate", "bigFont.fnt");
+  label = cocos2d::CCLabelBMFont::create("FPS", "bigFont.fnt");
   label->setPosition(10, 200 - 70);
   label->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
   label->setScale(0.5);
