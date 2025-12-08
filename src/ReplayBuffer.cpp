@@ -64,7 +64,7 @@ void ReplayBuffer::trim_buffer() {
         first_keyframe_idx = i;
         found_keyframe = true;
       }
-      if (buffer[i].timestamp_ms >= cutoff_time) {
+      if (this->buffer[i].timestamp_ms >= cutoff_time) {
         break;
       }
     }
