@@ -16,9 +16,6 @@
 using namespace geode::prelude;
 
 class $modify(ReplayBuffer_MenuLayer, MenuLayer) {
-  struct Fields {
-    bool initialised_recording = false;
-  };
   bool init() override {
     if (!MenuLayer::init()) {
       return false;

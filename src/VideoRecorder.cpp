@@ -28,9 +28,7 @@ void VideoRecorder::encoder_thread() {
 
       av_frame_make_writable(this->av_frame);
 
-      this->pixel_buffer_manager->lock_frame();
       sws_scale(this->sws_ctx, rgb_data, stride, 0, this->frame_height, this->av_frame->data, this->av_frame->linesize);
-      this->pixel_buffer_manager->unlock_frame();
       this->av_frame->pts = pts++;
 
       int ret = avcodec_send_frame(this->av_codec_ctx, this->av_frame);
