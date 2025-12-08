@@ -48,7 +48,7 @@ void AudioRecorder::encoder_thread() {
       }
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 
   system->recordStop(this->fmod_driver_id);
@@ -75,6 +75,8 @@ AudioRecorder::AudioRecorder() {
 }
 
 AudioRecorder::~AudioRecorder() {
+  this->stop_recording();
+  this->encoder_thread_obj.join();
   this->destroy();
 }
 
@@ -250,7 +252,6 @@ void AudioRecorder::stop_recording() {
   }
   FMODAudioEngine::sharedEngine()->m_system->recordStop(this->fmod_driver_id);
   this->is_encoder_running = false;
-  //this->encoder_thread_obj.join();
 }
 
 void AudioRecorder::capture_samples() {
@@ -281,4 +282,8 @@ void AudioRecorder::capture_samples() {
   this->fmod_sound->unlock(ptr1, ptr2, len1, len2);
 
   this->last_record_pos = this->record_pos;
+}
+
+void AudioRecorder::wait_until_encoder_finished() {
+  this->encoder_thread_obj.join();
 }

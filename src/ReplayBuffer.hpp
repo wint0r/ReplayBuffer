@@ -19,7 +19,7 @@ struct BufferedPacket {
 };
 
 class ReplayBuffer {
-  std::deque<BufferedPacket> buffer;
+  std::vector<BufferedPacket> buffer;
   size_t max_duration;
   std::map<int, AVCodecContext*> codec_contexts;
   std::map<int, AVRational> time_bases;

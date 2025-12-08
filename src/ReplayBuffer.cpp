@@ -51,22 +51,12 @@ void ReplayBuffer::trim_buffer() {
   bool found_keyframe = false;
 
   for (size_t i = 0; i < this->buffer.size(); i++) {
-    if (this->buffer[i].timestamp_ms >= cutoff_time && this->buffer[i].is_keyframe) {
+    if (this->buffer[i].is_keyframe) {
       first_keyframe_idx = i;
       found_keyframe = true;
-      break;
     }
-  }
-
-  if (!found_keyframe) {
-    for (size_t i = 0; i < this->buffer.size(); i++) {
-      if (this->buffer[i].is_keyframe) {
-        first_keyframe_idx = i;
-        found_keyframe = true;
-      }
-      if (this->buffer[i].timestamp_ms >= cutoff_time) {
-        break;
-      }
+    if (this->buffer[i].timestamp_ms >= cutoff_time) {
+      break;
     }
   }
 
@@ -74,9 +64,14 @@ void ReplayBuffer::trim_buffer() {
     return;
   }
 
+  auto it = this->buffer.begin();
   for (size_t i = 0; i < first_keyframe_idx; i++) {
-    av_packet_free(&this->buffer.front().packet);
-    this->buffer.pop_front();
+    if (it->timestamp_ms < this->buffer[first_keyframe_idx].timestamp_ms) {
+      av_packet_free(&it->packet);
+      this->buffer.erase(it);
+    } else {
+      ++it;
+    }
   }
 }
 
@@ -143,15 +138,10 @@ geode::Result<> ReplayBuffer::save_to_file(const std::filesystem::path &filename
   int64_t start_timestamp_ms = this->buffer[video_start_idx].timestamp_ms;
   std::map<int, int64_t> start_indices;
   std::map<int, std::vector<BufferedPacket>> packets_per_stream;
-  for (int64_t i = 0; i < this->buffer.size(); i++) {
-    auto &packet = this->buffer[i];
+  for (auto &packet : this->buffer) {
     packets_per_stream[packet.stream_idx].push_back(packet);
-    bool is_within_limits_time = packet.timestamp_ms >= start_timestamp_ms;
-    bool is_within_limits_audio = (is_within_limits_time && packet.stream_idx != video_stream_idx);
-    bool is_within_limits_video = (is_within_limits_time && packet.is_keyframe);
-    bool is_within_limits = (is_within_limits_video || is_within_limits_audio);
-    if ((is_within_limits && start_indices.count(packet.stream_idx) == 0)
-      || (!is_within_limits_time && packet.is_keyframe)) {
+    bool is_within_time_limits = packet.timestamp_ms >= start_timestamp_ms;
+    if (is_within_time_limits && (packet.is_keyframe || packet.stream_idx != this->video_stream_idx) && start_indices.count(packet.stream_idx) == 0) {
       start_indices[packet.stream_idx] = packets_per_stream[packet.stream_idx].size() - 1;
     }
   }
@@ -171,7 +161,7 @@ geode::Result<> ReplayBuffer::save_to_file(const std::filesystem::path &filename
       [] (BufferedPacket &a, BufferedPacket &b) {
         return a.packet->dts < b.packet->dts;
       });
-    if (dts_it->packet->dts == AV_NOPTS_VALUE) {
+    if (!filtered_buffer_dts) {
       timestamp_offset = pts_it->packet->pts;
     } else {
       timestamp_offset = std::min(pts_it->packet->pts, dts_it->packet->dts);
@@ -252,5 +242,4 @@ int64_t ReplayBuffer::get_buffer_duration() {
 
 void ReplayBuffer::set_duration(int64_t new_duration) {
   this->max_duration = new_duration;
-  this->trim_buffer();
 }

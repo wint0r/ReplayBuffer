@@ -4,12 +4,6 @@
 #include <Geode/cocos/platform/CCGL.h>
 #include <vector>
 
-struct Frame {
-  //std::vector<uint8_t> frame_data;
-  uint8_t *data;
-  cocos2d::CCSize frame_size;
-};
-
 class PixelBufferManager {
   GLuint pbos[2]{}, pbo_idx;
   cocos2d::CCSize frame_size;

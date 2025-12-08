@@ -1,5 +1,6 @@
 #include "VideoRecorder.hpp"
 #include <Geode/modify/CCEGLViewProtocol.hpp>
+#include <Geode/modify/CCDirector.hpp>
 #include "Timer.hpp"
 
 extern "C" {
@@ -13,23 +14,23 @@ void VideoRecorder::encoder_thread() {
   Timer t;
   t.start();
 
-  const double inv_framerate = 1000.0 * static_cast<float>(this->av_codec_ctx->time_base.num) / this->av_codec_ctx->time_base.den;
   int64_t pts = 0;
-  while (this->is_encoder_running) {
-    const double dt = t.stop();
-    this->dt_accumulator += dt;
-    t.start();
+  uint8_t *rgb_data[] = { this->pixel_buffer_manager->get_current_frame() };
+  int stride[] = { this->frame_width * 4 };
+  rgb_data[0] += static_cast<size_t>(this->frame_height - 1) * stride[0];
+  stride[0] *= -1;
 
-    while (this->dt_accumulator >= inv_framerate) {
-      this->dt_accumulator -= inv_framerate;
+  double last_frame_timestamp = t.stop();
+  while (this->is_encoder_running) {
+    double timestamp = t.stop();
+    while (timestamp - last_frame_timestamp >= this->inv_framerate) {
+      last_frame_timestamp = timestamp;
 
       av_frame_make_writable(this->av_frame);
 
-      uint8_t *rgb_data[] = { this->pixel_buffer_manager->get_current_frame() };
-      int stride[] = { this->frame_width * 4 };
-      rgb_data[0] += static_cast<size_t>(this->frame_height - 1) * stride[0];
-      stride[0] *= -1;
+      this->pixel_buffer_manager->lock_frame();
       sws_scale(this->sws_ctx, rgb_data, stride, 0, this->frame_height, this->av_frame->data, this->av_frame->linesize);
+      this->pixel_buffer_manager->unlock_frame();
       this->av_frame->pts = pts++;
 
       int ret = avcodec_send_frame(this->av_codec_ctx, this->av_frame);
@@ -49,8 +50,7 @@ void VideoRecorder::encoder_thread() {
         av_packet_unref(this->av_packet);
       }
     }
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    //std::this_thread::yield();
   }
 }
 
@@ -129,12 +129,14 @@ VideoRecorder::VideoRecorder() {
   this->frame_height = 0;
   this->using_hw_accel = false;
   this->hw_device_ctx = nullptr;
+  this->inv_framerate = 0.0;
 
   this->pixel_buffer_manager = std::make_unique<PixelBufferManager>();
 }
 
 VideoRecorder::~VideoRecorder() {
   this->stop_recording();
+  this->encoder_thread_obj.join();
   this->destroy_av();
 }
 
@@ -218,6 +220,8 @@ geode::Result<> VideoRecorder::init_av(int width, int height, int framerate, boo
     return geode::Err("could not initialize sws context");
   }
 
+  this->inv_framerate = 1000.0 * static_cast<float>(this->av_codec_ctx->time_base.num) / this->av_codec_ctx->time_base.den;
+
   return geode::Ok();
 }
 
@@ -276,28 +280,25 @@ void VideoRecorder::start_recording(std::shared_ptr<ReplayBuffer> &replay_buffer
 }
 
 void VideoRecorder::stop_recording() {
-  if (!this->is_encoder_running) {
-    return;
-  }
-
   this->is_encoder_running = false;
-  //this->encoder_thread_obj.join();
 }
 
 bool VideoRecorder::is_recording() const {
   return this->is_encoder_running;
 }
 
+void VideoRecorder::wait_until_encoder_finished() {
+  this->encoder_thread_obj.join();
+}
+
 geode::Hook *CCEGLView_swapBuffers_hook = nullptr;
 void CCEGLView_swapBuffers_detour(cocos2d::CCEGLView *view) {
+  view->swapBuffers();
+
   auto recorder = VideoRecorder::get_instance();
   if (recorder->is_recording()) {
     recorder->pixel_buffer_manager->capture_frame();
   }
-
-  CCEGLView_swapBuffers_hook->disable().unwrap();
-  view->swapBuffers();
-  CCEGLView_swapBuffers_hook->enable().unwrap();
 }
 
 void VideoRecorder::init_hook() {
@@ -307,11 +308,6 @@ void VideoRecorder::init_hook() {
     "CCEGLView::swapBuffers",
     tulip::hook::TulipConvention::Thiscall
   ).unwrap();
-
-  auto *director = cocos2d::CCDirector::sharedDirector();
-  auto size = director->getOpenGLView()->getFrameSize();
-  this->frame_width = size.width;
-  this->frame_height = size.height;
 }
 
 class $modify(ReplayBuffer_CCEGLViewProtocol, cocos2d::CCEGLViewProtocol) {

@@ -48,6 +48,7 @@ public:
   void start_recording(std::shared_ptr<ReplayBuffer> &replay_buffer, int stream_idx);
   void stop_recording();
   void capture_samples();
+  void wait_until_encoder_finished();
 };
 
 #endif //REPLAYBUFFER_AUDIORECORDER_HPP

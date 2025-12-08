@@ -46,6 +46,11 @@ Result<> Recorder::start() {
     recorder->init_hook();
     this->first_init = true;
   } else {
+    recorder->wait_until_encoder_finished();
+    desktop_recorder->wait_until_encoder_finished();
+    mic_recorder->wait_until_encoder_finished();
+    replay_buffer->clear();
+
     auto res = recorder->reinit_av(width, height, framerate, hw_accel, bitrate);
     if (res.isErr()) {
       return Err("error while initialising ffmpeg for video recording: {}", res.err());
@@ -60,6 +65,8 @@ Result<> Recorder::start() {
     if (res.isErr()) {
       return Err("error while initialising microphone audio recorder/ffmpeg: {}", res.err());
     }
+
+    replay_buffer->set_duration(Mod::get()->getSavedValue<int>("settings-length"_spr) * 1000);
   }
 
   recorder->start_recording(replay_buffer);
@@ -74,7 +81,6 @@ void Recorder::stop() {
   recorder->stop_recording();
   mic_recorder->stop_recording();
   desktop_recorder->stop_recording();
-  replay_buffer->clear();
 }
 
 void Recorder::clip() {

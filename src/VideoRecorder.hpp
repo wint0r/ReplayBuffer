@@ -7,6 +7,7 @@
 
 #include "PixelBufferManager.hpp"
 #include "ReplayBuffer.hpp"
+#include "Timer.hpp"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -29,6 +30,7 @@ class VideoRecorder {
   bool is_encoder_running;
   std::thread encoder_thread_obj;
   double dt_accumulator;
+  double inv_framerate;
   int frame_width, frame_height;
   bool using_hw_accel;
   AVBufferRef* hw_device_ctx;
@@ -58,6 +60,7 @@ public:
   void start_recording(std::shared_ptr<ReplayBuffer> &replay_buffer);
   void stop_recording();
   bool is_recording() const;
+  void wait_until_encoder_finished();
 };
 
 #endif
