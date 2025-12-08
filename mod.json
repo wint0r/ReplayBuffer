@@ -21,5 +21,10 @@
 			"name": "Output Folder",
 			"default": "{temp_dir}"
 		}
+	},
+	"resources": {
+		"sprites": [
+			"resources/icon.png"
+		]
 	}
 }

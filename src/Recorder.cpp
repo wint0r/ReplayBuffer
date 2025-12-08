@@ -76,3 +76,22 @@ void Recorder::stop() {
   desktop_recorder->stop_recording();
   replay_buffer->clear();
 }
+
+void Recorder::clip() {
+  auto output_dir = Mod::get()->getSettingValue<std::filesystem::path>("output-dir");
+  char buffer[80];
+  std::time_t now = std::time(nullptr);
+  std::tm* local_time = std::localtime(&now);
+  std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H-%M-%S.mp4", local_time);
+
+  if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
+    auto result = this->replay_buffer->save_to_file(output_dir / buffer);
+    if (result.isErr()) {
+      FLAlertLayer::create(
+        "Error while saving",
+        result.unwrapErr(),
+        "OK"
+      )->show();
+    }
+  }
+}

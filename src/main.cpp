@@ -5,6 +5,8 @@
 #include "PixelBufferManager.hpp"
 #include <queue>
 #include <Geode/modify/MenuLayer.hpp>
+#include <Geode/modify/LevelInfoLayer.hpp>
+#include <Geode/modify/EditLevelLayer.hpp>
 #include "ReplayBuffer.hpp"
 #include "VideoRecorder.hpp"
 #include "AudioRecorder.hpp"
@@ -13,7 +15,7 @@
 
 using namespace geode::prelude;
 
-class $modify(MyMenuLayer, MenuLayer) {
+class $modify(ReplayBuffer_MenuLayer, MenuLayer) {
   struct Fields {
     bool initialised_recording = false;
   };
@@ -22,7 +24,11 @@ class $modify(MyMenuLayer, MenuLayer) {
       return false;
     }
 
-    auto *button = CCMenuItemSpriteExtra::create(CCSprite::createWithSpriteFrameName("GJ_likeBtn_001.png"), this, menu_selector(MyMenuLayer::onButton));
+    auto *button = CCMenuItemSpriteExtra::create(
+      CircleButtonSprite::createWithSprite("icon.png"_spr, 0.8),
+      this,
+      menu_selector(ReplayBuffer_MenuLayer::onSettingsButton)
+      );
     auto menu = this->getChildByID("bottom-menu");
     menu->addChild(button);
     menu->updateLayout();
@@ -30,7 +36,7 @@ class $modify(MyMenuLayer, MenuLayer) {
     return true;
   }
 
-  void onButton(CCObject *) {
+  void onSettingsButton(CCObject *) {
     RBSettingsLayer::create()->show();
   }
 };
@@ -39,39 +45,70 @@ class $modify(ReplayBuffer_PauseLayer, PauseLayer) {
   void customSetup() override {
     PauseLayer::customSetup();
 
-    auto *sprite = CCSprite::createWithSpriteFrameName("GJ_shareBtn_001.png");
-    sprite->setScale(0.5f);
-
     auto *menu = this->getChildByID("left-button-menu");
-    auto *button = CCMenuItemSpriteExtra::create(sprite, this, menu_selector(ReplayBuffer_PauseLayer::onClipButton));
-    menu->addChild(button);
+    if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
+      auto *sprite = CCSprite::createWithSpriteFrameName("GJ_shareBtn_001.png");
+      sprite->setScale(0.5f);
+      auto *button = CCMenuItemSpriteExtra::create(sprite, this, menu_selector(ReplayBuffer_PauseLayer::onClipButton));
+      menu->addChild(button);
+    }
 
-    sprite = CCSprite::createWithSpriteFrameName("GJ_optionsBtn02_001.png");
-    button = CCMenuItemSpriteExtra::create(sprite, this, menu_selector(ReplayBuffer_PauseLayer::onSettingsButton));
+    auto *button = CCMenuItemSpriteExtra::create(
+      CircleButtonSprite::createWithSprite("icon.png"_spr, 0.8),
+      this,
+      menu_selector(ReplayBuffer_MenuLayer::onSettingsButton)
+      );
     menu->addChild(button);
   }
 
   void onClipButton(CCObject *) {
-    auto output_dir = Mod::get()->getSettingValue<std::filesystem::path>("output-dir");
-    char buffer[80];
-    std::time_t now = std::time(nullptr);
-    std::tm* local_time = std::localtime(&now);
-    std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H-%M-%S.mp4", local_time);
-
-    if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
-      auto result = Recorder::get_instance()->replay_buffer->save_to_file(output_dir / buffer);
-      if (result.isErr()) {
-        FLAlertLayer::create(
-          "Error while saving",
-          result.unwrapErr(),
-          "OK"
-        )->show();
-      }
-    }
+    Recorder::get_instance()->clip();
   }
 
   void onSettingsButton(CCObject *) {
     RBSettingsLayer::create()->show();
+  }
+};
+
+class $modify(ReplayBuffer_EditLevelLayer, EditLevelLayer) {
+  bool init(GJGameLevel *level) {
+    if (!EditLevelLayer::init(level)) {
+      return false;
+    }
+
+    auto *menu = this->getChildByID("level-actions-menu");
+    if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
+      auto *sprite = CCSprite::createWithSpriteFrameName("GJ_shareBtn_001.png");
+      sprite->setScale(0.8f);
+      auto *button = CCMenuItemSpriteExtra::create(sprite, this, menu_selector(ReplayBuffer_EditLevelLayer::onClipButton));
+      menu->addChild(button);
+      menu->updateLayout();
+    }
+  }
+
+  void onClipButton(CCObject *) {
+    Recorder::get_instance()->clip();
+  }
+};
+
+class $modify(ReplayBuffer_LevelInfoLayer, LevelInfoLayer) {
+  bool init(GJGameLevel *level, bool challenge) {
+    if (!LevelInfoLayer::init(level, challenge)) {
+      return false;
+    }
+
+    auto *menu = this->getChildByID("left-side-menu");
+    if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
+      auto *sprite = CCSprite::createWithSpriteFrameName("GJ_shareBtn_001.png");
+      sprite->setScale(0.8f);
+      auto *button = CCMenuItemSpriteExtra::create(sprite, this, menu_selector(ReplayBuffer_LevelInfoLayer::onClipButton));
+      menu->addChild(button);
+      menu->updateLayout();
+    }
+  }
+
+  void onClipButton(CCObject *) {
+    Recorder::get_instance()->clip();
   }
 };
 

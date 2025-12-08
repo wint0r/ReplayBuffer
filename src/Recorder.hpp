@@ -16,6 +16,7 @@ struct Recorder {
 
   geode::Result<> start();
   void stop();
+  void clip();
 };
 
 

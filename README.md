@@ -18,3 +18,6 @@ It's not on the Geode index yet, but hopefully soon.
 - Any platform other than Windows is not supported right now
 - It's kinda unoptimised
 - The UI sucks
+
+## Credits
+Special thanks to foody for the icon
