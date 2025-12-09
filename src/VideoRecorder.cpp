@@ -11,6 +11,10 @@ extern "C" {
 }
 
 void VideoRecorder::encoder_thread() {
+#ifdef GEODE_IS_WINDOWS64
+  timeBeginPeriod(1);
+#endif
+
   Timer t;
   t.start();
 
@@ -24,7 +28,7 @@ void VideoRecorder::encoder_thread() {
   while (this->is_encoder_running) {
     double timestamp = t.stop();
     while (timestamp - last_frame_timestamp >= this->inv_framerate) {
-      last_frame_timestamp = timestamp;
+      last_frame_timestamp += this->inv_framerate;
 
       av_frame_make_writable(this->av_frame);
 
@@ -48,8 +52,12 @@ void VideoRecorder::encoder_thread() {
         av_packet_unref(this->av_packet);
       }
     }
-    //std::this_thread::yield();
+    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(this->inv_framerate)));
   }
+
+#ifdef GEODE_IS_WINDOWS64
+  timeEndPeriod(1);
+#endif
 }
 
 const AVCodec *VideoRecorder::get_codec() {
@@ -122,7 +130,7 @@ VideoRecorder::VideoRecorder() {
   this->av_packet = nullptr;
   this->sws_ctx = nullptr;
   this->is_encoder_running = false;
-  this->dt_accumulator = 0;
+  this->last_capture_timestamp = 0;
   this->frame_width = 0;
   this->frame_height = 0;
   this->using_hw_accel = false;
@@ -274,6 +282,8 @@ void VideoRecorder::start_recording(std::shared_ptr<ReplayBuffer> &replay_buffer
   this->replay_buffer = replay_buffer;
   this->replay_buffer->add_stream(0, this->av_codec_ctx, true);
   this->is_encoder_running = true;
+  this->capture_timer.start();
+  this->last_capture_timestamp = this->capture_timer.stop();
   this->encoder_thread_obj = std::thread(&VideoRecorder::encoder_thread, this);
 }
 
@@ -295,7 +305,11 @@ void CCEGLView_swapBuffers_detour(cocos2d::CCEGLView *view) {
 
   auto recorder = VideoRecorder::get_instance();
   if (recorder->is_recording()) {
-    recorder->pixel_buffer_manager->capture_frame();
+    double timestamp = recorder->capture_timer.stop();
+    if (timestamp - recorder->last_capture_timestamp >= recorder->inv_framerate) {
+      recorder->last_capture_timestamp = timestamp;
+      recorder->pixel_buffer_manager->capture_frame();
+    }
   }
 }
 

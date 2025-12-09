@@ -51,6 +51,9 @@ elseif(WIN32)
             ${SWRESAMPLE_LIBRARY}
             ${AVFILTER_LIBRARY}
             ${X264_LIBRARY}
+    )
+
+    set(OTHER_LIBRARIES
             ws2_32
             secur32
             strmiids
@@ -59,6 +62,7 @@ elseif(WIN32)
             mfuuid
             ncrypt
             crypt32
+            winmm
     )
 
     message(STATUS ${FFMPEG_LIBRARIES})
@@ -77,6 +81,6 @@ elseif(APPLE)
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${FFMPEG_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${FFMPEG_LIBRARIES} ${OTHER_LIBRARIES})
 
 setup_geode_mod(${PROJECT_NAME})

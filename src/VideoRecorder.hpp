@@ -29,7 +29,8 @@ class VideoRecorder {
   SwsContext *sws_ctx;
   bool is_encoder_running;
   std::thread encoder_thread_obj;
-  double dt_accumulator;
+  double last_capture_timestamp;
+  Timer capture_timer;
   double inv_framerate;
   int frame_width, frame_height;
   bool using_hw_accel;
