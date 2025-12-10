@@ -1,86 +1,80 @@
 #include "Recorder.hpp"
-#include "VideoRecorder.hpp"
+#include "AudioEncoder.hpp"
+#include "VideoEncoder.hpp"
 #include <Geode/Geode.hpp>
 using namespace geode::prelude;
 
 Recorder::Recorder() {
-  first_init = false;
+  m_firstInit = true;
+  m_replayBuffer = std::make_shared<ReplayBuffer>();
 }
 
 Recorder::~Recorder() {
   this->stop();
 }
 
-std::shared_ptr<Recorder> Recorder::get_instance() {
+std::shared_ptr<Recorder> Recorder::getInstance() {
   static std::shared_ptr<Recorder> instance = std::make_shared<Recorder>();
   return instance;
 }
 
 Result<> Recorder::start() {
-  auto recorder = VideoRecorder::get_instance();
   int width = Mod::get()->getSavedValue<int>("settings-width"_spr);
   int height = Mod::get()->getSavedValue<int>("settings-height"_spr);
   int framerate = Mod::get()->getSavedValue<int>("settings-framerate"_spr);
-  bool hw_accel = Mod::get()->getSavedValue<bool>("settings-hw-accel"_spr);
+  bool hwAccel = Mod::get()->getSavedValue<bool>("settings-hw-accel"_spr);
   int bitrate = Mod::get()->getSavedValue<int>("settings-bitrate"_spr) * 1000;
+  int length = Mod::get()->getSavedValue<int>("settings-length"_spr);
+  int deviceIDs[] = {
+    -1,
+    Mod::get()->getSavedValue<int>("settings-audio-id-1"_spr),
+    Mod::get()->getSavedValue<int>("settings-audio-id-2"_spr)
+  };
 
-  if (!this->first_init) {
-    auto res = recorder->init_av(width, height, framerate, hw_accel, bitrate);
-    if (res.isErr()) {
-      return Err("error while initialising ffmpeg for video recording: {}", res.err());
+  try {
+    if (m_firstInit) {
+      m_replayBuffer->addStream<VideoEncoder>(0);
+      m_replayBuffer->addStream<AudioEncoder>(1);
+      m_replayBuffer->addStream<AudioEncoder>(2);
+    } else {
+      for (const auto &[_idx, encoder] : m_replayBuffer->getEncoders()) {
+        encoder->joinThread();
+      }
+      m_replayBuffer->clear();
     }
 
-    desktop_recorder = std::make_shared<AudioRecorder>();
-    res = desktop_recorder->init(Mod::get()->getSavedValue<int>("settings-audio-id-1"_spr));
-    if (res.isErr()) {
-      return Err("error while initialising desktop audio recorder/ffmpeg: {}", res.err());
+    m_replayBuffer->setDuration(length);
+
+    for (const auto &[idx, encoder] : m_replayBuffer->getEncoders()) {
+      if (encoder->isVideo()) {
+        auto frameSize = CCDirector::sharedDirector()->getOpenGLView()->getFrameSize();
+        auto videoEncoder = std::dynamic_pointer_cast<VideoEncoder>(encoder);
+        videoEncoder->setSrcResolution(frameSize.width, frameSize.height);
+        videoEncoder->setDstResolution(width, height);
+        videoEncoder->setDstFramerate(framerate);
+        videoEncoder->setDstBitrate(bitrate);
+        videoEncoder->setUsingGPU(hwAccel);
+      } else {
+        auto audioEncoder = std::dynamic_pointer_cast<AudioEncoder>(encoder);
+        audioEncoder->setDeviceID(deviceIDs[idx]);
+      }
+
+      if (m_firstInit) {
+        encoder->init();
+      }
+      encoder->start();
     }
 
-    mic_recorder = std::make_shared<AudioRecorder>();
-    res = mic_recorder->init(Mod::get()->getSavedValue<int>("settings-audio-id-2"_spr));
-    if (res.isErr()) {
-      return Err("error while initialising microphone audio recorder/ffmpeg: {}", res.err());
-    }
-
-    replay_buffer = std::make_shared<ReplayBuffer>(Mod::get()->getSavedValue<int>("settings-length"_spr) * 1000);
-    recorder->init_hook();
-    this->first_init = true;
-  } else {
-    recorder->wait_until_encoder_finished();
-    desktop_recorder->wait_until_encoder_finished();
-    mic_recorder->wait_until_encoder_finished();
-    replay_buffer->clear();
-
-    auto res = recorder->reinit_av(width, height, framerate, hw_accel, bitrate);
-    if (res.isErr()) {
-      return Err("error while initialising ffmpeg for video recording: {}", res.err());
-    }
-
-    res = desktop_recorder->reinit(Mod::get()->getSavedValue<int>("settings-audio-id-1"_spr));
-    if (res.isErr()) {
-      return Err("error while initialising desktop audio recorder/ffmpeg: {}", res.err());
-    }
-
-    res = mic_recorder->reinit(Mod::get()->getSavedValue<int>("settings-audio-id-2"_spr));
-    if (res.isErr()) {
-      return Err("error while initialising microphone audio recorder/ffmpeg: {}", res.err());
-    }
-
-    replay_buffer->set_duration(Mod::get()->getSavedValue<int>("settings-length"_spr) * 1000);
+    m_firstInit = false;
+  } catch (const std::string &e) {
+    return Err(e);
   }
-
-  recorder->start_recording(replay_buffer);
-  desktop_recorder->start_recording(replay_buffer, 1);
-  mic_recorder->start_recording(replay_buffer, 2);
 
   return Ok();
 }
 
 void Recorder::stop() {
-  auto recorder = VideoRecorder::get_instance();
-  recorder->stop_recording();
-  mic_recorder->stop_recording();
-  desktop_recorder->stop_recording();
+  m_replayBuffer->stop();
 }
 
 void Recorder::clip() {
@@ -91,13 +85,20 @@ void Recorder::clip() {
   std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H-%M-%S.mp4", local_time);
 
   if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
-    auto result = this->replay_buffer->save_to_file(output_dir / buffer);
-    if (result.isErr()) {
+    try {
+      auto path = output_dir / buffer;
+      m_replayBuffer->saveToFile(path);
+      FLAlertLayer::create(
+        "Success",
+        fmt::format("Clip saved at {}", path.string()),
+        "OK"
+        )->show();
+    } catch (const std::string &e) {
       FLAlertLayer::create(
         "Error while saving",
-        result.unwrapErr(),
+        e,
         "OK"
-      )->show();
+        )->show();
     }
   }
 }

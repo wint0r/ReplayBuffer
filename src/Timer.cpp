@@ -10,10 +10,10 @@ void Timer::start() {
   QueryPerformanceCounter(&this->begin);
 }
 
-double Timer::stop() const {
+int64_t Timer::stop() const {
   LARGE_INTEGER end;
   QueryPerformanceCounter(&end);
-  return static_cast<double>(end.QuadPart - this->begin.QuadPart) * 1000.0 / this->frequency.QuadPart;
+  return (end.QuadPart - this->begin.QuadPart) * 1000000 / this->frequency.QuadPart;
 }
 
 #else
@@ -23,12 +23,12 @@ Timer::Timer() {
 }
 
 void Timer::start() {
-  t->start = std::chrono::high_resolution_clock::now();
+  this->begin = std::chrono::high_resolution_clock::now();
 }
 
-double Timer::stop() const {
+int64_t Timer::stop() const {
   auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> duration_ms = end - t->start;
+  std::chrono::duration<int64_t, std::micro> duration_ms = end - this->begin;
   return duration_ms.count();
 }
 

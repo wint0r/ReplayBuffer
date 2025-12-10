@@ -12,10 +12,15 @@ project(ReplayBuffer VERSION 1.0.0)
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES}
-        src/AudioRecorder.cpp
         src/Timer.cpp
         src/RBSettingsLayer.cpp
-        src/Recorder.cpp)
+        src/Recorder.cpp
+        src/BaseEncoder.hpp
+        src/BaseEncoder.cpp
+        src/VideoEncoder.hpp
+        src/VideoEncoder.cpp
+        src/AudioEncoder.hpp
+        src/AudioEncoder.cpp)
 
 if (NOT DEFINED ENV{GEODE_SDK})
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")

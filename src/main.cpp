@@ -1,17 +1,19 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/PauseLayer.hpp>
-#include <Geode/cocos/platform/win32/CCEGLView.h>
 #include <Geode/cocos/CCDirector.h>
 #include "PixelBufferManager.hpp"
 #include <queue>
+#include <ranges>
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include <Geode/modify/EditLevelLayer.hpp>
+#include <Geode/modify/CCEGLViewProtocol.hpp>
+#include <Geode/modify/CCScheduler.hpp>
+#include "AudioEncoder.hpp"
 #include "ReplayBuffer.hpp"
-#include "VideoRecorder.hpp"
-#include "AudioRecorder.hpp"
 #include "RBSettingsLayer.hpp"
 #include "Recorder.hpp"
+#include "VideoEncoder.hpp"
 
 using namespace geode::prelude;
 
@@ -59,7 +61,7 @@ class $modify(ReplayBuffer_PauseLayer, PauseLayer) {
   }
 
   void onClipButton(CCObject *) {
-    Recorder::get_instance()->clip();
+    Recorder::getInstance()->clip();
   }
 
   void onSettingsButton(CCObject *) {
@@ -86,7 +88,7 @@ class $modify(ReplayBuffer_EditLevelLayer, EditLevelLayer) {
   }
 
   void onClipButton(CCObject *) {
-    Recorder::get_instance()->clip();
+    Recorder::getInstance()->clip();
   }
 };
 
@@ -109,7 +111,28 @@ class $modify(ReplayBuffer_LevelInfoLayer, LevelInfoLayer) {
   }
 
   void onClipButton(CCObject *) {
-    Recorder::get_instance()->clip();
+    Recorder::getInstance()->clip();
+  }
+};
+
+class $modify(ReplayBuffer_CCEGLViewProtocol, cocos2d::CCEGLViewProtocol) {
+  void setFrameSize(float width, float height) override {
+    CCEGLViewProtocol::setFrameSize(width, height);
+
+    auto encoders = Recorder::getInstance()->m_replayBuffer->getEncoders();
+    for (auto &encoder: encoders | std::views::values) {
+      if (encoder->isVideo()) {
+        auto videoEncoder = std::dynamic_pointer_cast<VideoEncoder>(encoder);
+        videoEncoder->setSrcResolution(width, height);
+      }
+    }
+  }
+};
+
+class $modify(ReplayBuffer_CCScheduler, cocos2d::CCScheduler) {
+  void update(float dt) override {
+    CCScheduler::update(dt);
+    Recorder::getInstance()->m_replayBuffer->update();
   }
 };
 
@@ -121,16 +144,16 @@ $on_mod(Loaded) {
     Mod::get()->setSavedValue<int>("settings-framerate"_spr, 60);
     Mod::get()->setSavedValue<bool>("settings-hw-accel"_spr, true);
     Mod::get()->setSavedValue<int>("settings-bitrate"_spr, 12000);
-    Mod::get()->setSavedValue<int>("settings-audio-id-1"_spr, 0);
-    auto device_list = AudioRecorder::get_device_list();
-    int default_desktop_id = 0;
-    for (int i = 0; i < device_list.size(); i++) {
-      if (device_list[i].contains("[loopback]")) {
-        default_desktop_id = i;
+    Mod::get()->setSavedValue<int>("settings-audio-id-2"_spr, 0);
+    auto deviceList = AudioEncoder::getDeviceList();
+    int defaultDesktopID = 0;
+    for (int i = 0; i < deviceList.size(); i++) {
+      if (deviceList[i].contains("[loopback]")) {
+        defaultDesktopID = i;
         break;
       }
     }
-    Mod::get()->setSavedValue<int>("settings-audio-id-2"_spr, default_desktop_id);
+    Mod::get()->setSavedValue<int>("settings-audio-id-1"_spr, defaultDesktopID);
     Mod::get()->setSavedValue<int>("settings-length"_spr, 300);
   }
 

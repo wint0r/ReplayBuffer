@@ -5,24 +5,19 @@
 #include <vector>
 
 class PixelBufferManager {
-  GLuint pbos[2]{}, pbo_idx;
-  cocos2d::CCSize frame_size;
-  size_t buffer_size;
-  std::vector<uint8_t> last_frame_data;
-  std::mutex frame_mutex;
-  std::unique_lock<std::mutex> frame_lock;
-  bool first_frame;
+  GLuint m_pbos[2]{}, m_pboIdx;
+  int m_frameWidth, m_frameHeight;
+  size_t m_bufferSize;
+  std::vector<uint8_t> m_lastFrameData;
+  bool m_firstFrame;
 
 public:
   PixelBufferManager();
   ~PixelBufferManager();
 
-  void capture_frame();
-  void refresh_size();
-
-  void lock_frame();
-  void unlock_frame();
-  uint8_t *get_current_frame();
+  void captureFrame();
+  void changeSize(int width, int height);
+  uint8_t *getCurrentFrame();
 };
 
 #endif

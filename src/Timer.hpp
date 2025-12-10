@@ -11,17 +11,17 @@ struct Timer {
 
   Timer();
   void start();
-  double stop() const;
+  int64_t stop() const;
 };
 
 #else
 
 struct Timer {
-  std::chrono::high_resolution_clock start;
+  std::chrono::high_resolution_clock begin;
 
   Timer();
   void start();
-  double stop() const;
+  int64_t stop() const;
 };
 
 #endif

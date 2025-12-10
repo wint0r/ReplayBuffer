@@ -1,6 +1,7 @@
 #include "RBSettingsLayer.hpp"
+
+#include "AudioEncoder.hpp"
 #include "Recorder.hpp"
-#include "AudioRecorder.hpp"
 
 bool RBSettingsLayer::setup()  {
   this->setTitle("Replay Buffer Settings");
@@ -10,23 +11,23 @@ bool RBSettingsLayer::setup()  {
   menu->setID("settings-menu"_spr);
   this->m_mainLayer->addChild(menu);
 
-  bool is_recording = geode::Mod::get()->getSavedValue<bool>("is-recording"_spr);
-  auto *button_sprite = ButtonSprite::create(is_recording ? "Stop Recording" : "Start Recording");
-  auto *record_button = CCMenuItemSpriteExtra::create(
-    button_sprite,
+  bool isRecording = geode::Mod::get()->getSavedValue<bool>("is-recording"_spr);
+  auto *buttonSprite = ButtonSprite::create(isRecording ? "Stop Recording" : "Start Recording");
+  auto *recordButton = CCMenuItemSpriteExtra::create(
+    buttonSprite,
     this,
     menu_selector(RBSettingsLayer::onRecordButton)
     );
-  button_sprite->m_BGSprite = cocos2d::extension::CCScale9Sprite::createWithSpriteFrameName(!is_recording ? "GJ_button_01.png" : "GJ_button_06.png");
-  record_button->setPosition(140, 68);
-  menu->addChild(record_button);
+  buttonSprite->m_BGSprite = cocos2d::extension::CCScale9Sprite::createWithSpriteFrameName(!isRecording ? "GJ_button_01.png" : "GJ_button_06.png");
+  recordButton->setPosition(140, 68);
+  menu->addChild(recordButton);
 
-  auto *hw_accel_toggle = CCMenuItemToggler::createWithStandardSprites(this, menu_selector(RBSettingsLayer::onHWAccelToggle), 1.0);
-  hw_accel_toggle->setPosition(252.5 + 10, 122.5);
-  hw_accel_toggle->setID("settings-hw-accel"_spr);
-  hw_accel_toggle->setScale(0.5);
-  hw_accel_toggle->toggle(geode::Mod::get()->getSavedValue<bool>("settings-hw-accel"_spr));
-  menu->addChild(hw_accel_toggle);
+  auto *hwAccelToggle = CCMenuItemToggler::createWithStandardSprites(this, menu_selector(RBSettingsLayer::onHWAccelToggle), 1.0);
+  hwAccelToggle->setPosition(252.5 + 10, 122.5);
+  hwAccelToggle->setID("settings-hw-accel"_spr);
+  hwAccelToggle->setScale(0.5);
+  hwAccelToggle->toggle(geode::Mod::get()->getSavedValue<bool>("settings-hw-accel"_spr));
+  menu->addChild(hwAccelToggle);
 
   auto *label = cocos2d::CCLabelBMFont::create("Width", "bigFont.fnt");
   label->setPosition(10, 200 - 30);
@@ -76,65 +77,65 @@ bool RBSettingsLayer::setup()  {
   label->setScale(0.5);
   this->m_mainLayer->addChild(label);
 
-  auto *text_box = geode::TextInput::create(100, "", "bigFont.fnt");
-  text_box->setPosition(80, 200 - 30);
-  text_box->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
-  text_box->setID("settings-width"_spr);
-  text_box->setScale(0.5);
-  text_box->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-width"_spr)));
-  this->m_mainLayer->addChild(text_box);
+  auto *textBox = geode::TextInput::create(100, "", "bigFont.fnt");
+  textBox->setPosition(80, 200 - 30);
+  textBox->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
+  textBox->setID("settings-width"_spr);
+  textBox->setScale(0.5);
+  textBox->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-width"_spr)));
+  this->m_mainLayer->addChild(textBox);
 
-  text_box = geode::TextInput::create(100, "", "bigFont.fnt");
-  text_box->setPosition(80, 200 - 50);
-  text_box->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
-  text_box->setID("settings-height"_spr);
-  text_box->setScale(0.5);
-  text_box->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-height"_spr)));
-  this->m_mainLayer->addChild(text_box);
+  textBox = geode::TextInput::create(100, "", "bigFont.fnt");
+  textBox->setPosition(80, 200 - 50);
+  textBox->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
+  textBox->setID("settings-height"_spr);
+  textBox->setScale(0.5);
+  textBox->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-height"_spr)));
+  this->m_mainLayer->addChild(textBox);
 
-  text_box = geode::TextInput::create(100, "", "bigFont.fnt");
-  text_box->setPosition(80, 200 - 70);
-  text_box->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
-  text_box->setID("settings-framerate"_spr);
-  text_box->setScale(0.5);
-  text_box->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-framerate"_spr)));
-  this->m_mainLayer->addChild(text_box);
+  textBox = geode::TextInput::create(100, "", "bigFont.fnt");
+  textBox->setPosition(80, 200 - 70);
+  textBox->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
+  textBox->setID("settings-framerate"_spr);
+  textBox->setScale(0.5);
+  textBox->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-framerate"_spr)));
+  this->m_mainLayer->addChild(textBox);
 
-  text_box = geode::TextInput::create(100, "", "bigFont.fnt");
-  text_box->setPosition(220, 200 - 30);
-  text_box->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
-  text_box->setID("settings-bitrate"_spr);
-  text_box->setScale(0.5);
-  text_box->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-bitrate"_spr)));
-  this->m_mainLayer->addChild(text_box);
+  textBox = geode::TextInput::create(100, "", "bigFont.fnt");
+  textBox->setPosition(220, 200 - 30);
+  textBox->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
+  textBox->setID("settings-bitrate"_spr);
+  textBox->setScale(0.5);
+  textBox->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-bitrate"_spr)));
+  this->m_mainLayer->addChild(textBox);
 
-  text_box = geode::TextInput::create(100, "", "bigFont.fnt");
-  text_box->setPosition(220, 200 - 50);
-  text_box->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
-  text_box->setID("settings-length"_spr);
-  text_box->setScale(0.5);
-  text_box->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-length"_spr)));
-  this->m_mainLayer->addChild(text_box);
+  textBox = geode::TextInput::create(100, "", "bigFont.fnt");
+  textBox->setPosition(220, 200 - 50);
+  textBox->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
+  textBox->setID("settings-length"_spr);
+  textBox->setScale(0.5);
+  textBox->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-length"_spr)));
+  this->m_mainLayer->addChild(textBox);
 
-  text_box = geode::TextInput::create(100, "", "bigFont.fnt");
-  text_box->setPosition(80, 200 - 90);
-  text_box->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
-  text_box->setID("settings-audio-id-1"_spr);
-  text_box->setScale(0.5);
-  text_box->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-audio-id-1"_spr)));
-  this->m_mainLayer->addChild(text_box);
+  textBox = geode::TextInput::create(100, "", "bigFont.fnt");
+  textBox->setPosition(80, 200 - 90);
+  textBox->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
+  textBox->setID("settings-audio-id-1"_spr);
+  textBox->setScale(0.5);
+  textBox->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-audio-id-1"_spr)));
+  this->m_mainLayer->addChild(textBox);
 
-  text_box = geode::TextInput::create(100, "", "bigFont.fnt");
-  text_box->setPosition(220, 200 - 90);
-  text_box->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
-  text_box->setID("settings-audio-id-2"_spr);
-  text_box->setScale(0.5);
-  text_box->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-audio-id-2"_spr)));
-  this->m_mainLayer->addChild(text_box);
+  textBox = geode::TextInput::create(100, "", "bigFont.fnt");
+  textBox->setPosition(220, 200 - 90);
+  textBox->setAnchorPoint(cocos2d::CCPoint(0.0, 1.0));
+  textBox->setID("settings-audio-id-2"_spr);
+  textBox->setScale(0.5);
+  textBox->setString(std::to_string(geode::Mod::get()->getSavedValue<int>("settings-audio-id-2"_spr)));
+  this->m_mainLayer->addChild(textBox);
 
-  button_sprite = ButtonSprite::create("Save Settings");
+  buttonSprite = ButtonSprite::create("Save Settings");
   auto *button = CCMenuItemSpriteExtra::create(
-    button_sprite,
+    buttonSprite,
     this,
     menu_selector(RBSettingsLayer::onSaveSettings)
     );
@@ -168,27 +169,27 @@ bool RBSettingsLayer::setup()  {
 
 void RBSettingsLayer::onRecordButton(CCObject *sender) {
   auto *button = dynamic_cast<CCMenuItemSpriteExtra *>(sender);
-  auto button_sprite = dynamic_cast<ButtonSprite *>(button->getNormalImage());
-  bool is_recording = geode::Mod::get()->getSavedValue<bool>("is-recording"_spr);
-  button_sprite->m_BGSprite = cocos2d::extension::CCScale9Sprite::createWithSpriteFrameName(is_recording ? "GJ_button_01.png" : "GJ_button_06.png");
-  button_sprite->setString(is_recording ? "Start Recording" : "Stop Recording");
-  geode::Mod::get()->setSavedValue<bool>("is-recording"_spr, !is_recording);
+  auto buttonSprite = dynamic_cast<ButtonSprite *>(button->getNormalImage());
+  bool isRecording = geode::Mod::get()->getSavedValue<bool>("is-recording"_spr);
+  buttonSprite->m_BGSprite = cocos2d::extension::CCScale9Sprite::createWithSpriteFrameName(isRecording ? "GJ_button_01.png" : "GJ_button_06.png");
+  buttonSprite->setString(isRecording ? "Start Recording" : "Stop Recording");
+  geode::Mod::get()->setSavedValue<bool>("is-recording"_spr, !isRecording);
 
   auto *menu = this->m_mainLayer->getChildByID("settings-menu"_spr);
-  dynamic_cast<CCMenuItemSpriteExtra *>(menu->getChildByID("settings-save"_spr))->setEnabled(is_recording);
+  dynamic_cast<CCMenuItemSpriteExtra *>(menu->getChildByID("settings-save"_spr))->setEnabled(isRecording);
 
-  if (!is_recording) {
-    auto result = Recorder::get_instance()->start();
+  if (!isRecording) {
+    auto result = Recorder::getInstance()->start();
     if (result.isErr()) {
-      button_sprite = dynamic_cast<ButtonSprite *>(button->getNormalImage());
-      button_sprite->m_BGSprite = cocos2d::extension::CCScale9Sprite::createWithSpriteFrameName("GJ_button_01.png");
-      button_sprite->setString("Start Recording");
+      buttonSprite = dynamic_cast<ButtonSprite *>(button->getNormalImage());
+      buttonSprite->m_BGSprite = cocos2d::extension::CCScale9Sprite::createWithSpriteFrameName("GJ_button_01.png");
+      buttonSprite->setString("Start Recording");
       dynamic_cast<CCMenuItemSpriteExtra *>(menu->getChildByID("settings-save"_spr))->setEnabled(true);
       geode::Mod::get()->setSavedValue<bool>("is-recording"_spr, false);
       FLAlertLayer::create("Error", result.unwrapErr(), "OK")->show();
     }
   } else {
-    Recorder::get_instance()->stop();
+    Recorder::getInstance()->stop();
   }
 }
 
@@ -198,7 +199,7 @@ void RBSettingsLayer::onHWAccelToggle(CCObject *sender) {
 }
 
 void RBSettingsLayer::onSaveSettings(CCObject *sender) {
-  static std::vector<std::string> settings_ids = {
+  static std::vector<std::string> settingsIDs = {
     "settings-width"_spr,
     "settings-height"_spr,
     "settings-framerate"_spr,
@@ -208,14 +209,14 @@ void RBSettingsLayer::onSaveSettings(CCObject *sender) {
     "settings-audio-id-2"_spr
   };
 
-  for (auto &settings_id : settings_ids) {
-    auto *text_box = dynamic_cast<geode::TextInput *>(this->m_mainLayer->getChildByID(settings_id));
-    geode::Mod::get()->setSavedValue(settings_id, std::stoi(text_box->getString()));
+  for (auto &settingsID : settingsIDs) {
+    auto *text_box = dynamic_cast<geode::TextInput *>(this->m_mainLayer->getChildByID(settingsID));
+    geode::Mod::get()->setSavedValue(settingsID, std::stoi(text_box->getString()));
   }
 
   auto *menu = this->m_mainLayer->getChildByID("settings-menu"_spr);
-  auto *hw_accel_toggle = dynamic_cast<CCMenuItemToggler *>(menu->getChildByID("settings-hw-accel"_spr));
-  geode::Mod::get()->setSavedValue("settings-hw-accel"_spr, hw_accel_toggle->isToggled());
+  auto *hwAccelToggle = dynamic_cast<CCMenuItemToggler *>(menu->getChildByID("settings-hw-accel"_spr));
+  geode::Mod::get()->setSavedValue("settings-hw-accel"_spr, hwAccelToggle->isToggled());
 }
 
 void RBSettingsLayer::onDismiss(CCObject *sender) {
@@ -223,12 +224,12 @@ void RBSettingsLayer::onDismiss(CCObject *sender) {
 }
 
 void RBSettingsLayer::onInfoIcon(CCObject *sender) {
-  std::string alert_string;
-  std::vector<std::string> devices = AudioRecorder::get_device_list();
+  std::string alertString;
+  std::vector<std::string> devices = AudioEncoder::getDeviceList();
   for (int i = 0; i < devices.size(); i++) {
-    alert_string += "[" + std::to_string(i) + "]: " + devices[i] + "\n";
+    alertString += "[" + std::to_string(i) + "]: " + devices[i] + "\n";
   }
-  FLAlertLayer::create("Audio Device IDs", alert_string, "OK")->show();
+  FLAlertLayer::create("Audio Device IDs", alertString, "OK")->show();
 }
 
 RBSettingsLayer *RBSettingsLayer::create() {

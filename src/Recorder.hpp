@@ -2,17 +2,15 @@
 #define REPLAYBUFFER_RECORDER_HPP
 
 #include "ReplayBuffer.hpp"
-#include "AudioRecorder.hpp"
 
 struct Recorder {
-  std::shared_ptr<ReplayBuffer> replay_buffer;
-  std::shared_ptr<AudioRecorder> desktop_recorder, mic_recorder;
-  bool first_init;
+  bool m_firstInit;
+  std::shared_ptr<ReplayBuffer> m_replayBuffer;
 
   Recorder();
   ~Recorder();
 
-  static std::shared_ptr<Recorder> get_instance();
+  static std::shared_ptr<Recorder> getInstance();
 
   geode::Result<> start();
   void stop();
