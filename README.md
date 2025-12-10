@@ -1,10 +1,10 @@
 # Replay Buffer
 
 ## How to use
-You first set the output directory (or leave it as the temp folder, works either way) and then go to the main menu
-(or pause menu) and click on the mod's icon. From there, you set your settings and for the audio settings, you take a
-look at the available audio device IDs by clicking the top right corner button. And then you press save settings, and
-start recording!
+You first set the output directory in the mod's settings (or leave it as the temp folder, works either way) 
+and then go to the main menu (or pause menu) and click on the mod's icon. From there, you set your settings and for the 
+audio settings, you take a look at the available audio device IDs by clicking the top right corner button. And then you 
+press save settings, and start recording!
 
 ## Building from source (Windows)
 You must first build ffmpeg as static libraries, with NVENC and AMF support if you want (or contact me for a build).
