@@ -8,7 +8,7 @@
 	},
 	"id": "wint0r.replaybuffer",
 	"name": "ReplayBuffer",
-	"version": "v1.0.0",
+	"version": "v1.1.0",
 	"developer": "wint0r",
 	"description": "An implementation of Replay Buffer.",
 	"tags": [ "offline", "universal" ],
