@@ -4,7 +4,8 @@
 
 void BaseEncoder::trimBuffer() {
   int64_t maxDurationPts = m_maxDuration * m_codecCtx->time_base.den / m_codecCtx->time_base.num;
-  if (m_packetBuffer.front()->pts > maxDurationPts) {
+  int64_t cutoff = m_packetBuffer.back()->pts - maxDurationPts;
+  if (m_packetBuffer.front()->pts < cutoff) {
     av_packet_free(&m_packetBuffer.front());
     m_packetBuffer.pop_front();
   }

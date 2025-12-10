@@ -39,6 +39,7 @@ Result<> Recorder::start() {
     } else {
       for (const auto &[_idx, encoder] : m_replayBuffer->getEncoders()) {
         encoder->joinThread();
+        encoder->destroy();
       }
       m_replayBuffer->clear();
     }
@@ -59,9 +60,7 @@ Result<> Recorder::start() {
         audioEncoder->setDeviceID(deviceIDs[idx]);
       }
 
-      if (m_firstInit) {
-        encoder->init();
-      }
+      encoder->init();
       encoder->start();
     }
 

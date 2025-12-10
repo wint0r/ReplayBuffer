@@ -82,8 +82,23 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
     throw fmt::format("could not write header, error: {}", errStr);
   }
 
+  int64_t maximumUs = 0;
   for (auto &[idx, encoder] : m_encoders) {
-    int64_t timestampOffset = encoder->getMinimumPTS();
+    int64_t pts = encoder->getMinimumPTS();
+    int64_t microseconds = av_rescale_q(pts, encoder->getCodecContext()->time_base, { 1, 1000000 });
+    if (microseconds > maximumUs) {
+      maximumUs = microseconds;
+    }
+  }
+
+  for (auto &[idx, encoder] : m_encoders) {
+    int64_t timestampOffset = av_rescale_q_rnd(
+      maximumUs,
+      { 1, 1000000 },
+      encoder->getCodecContext()->time_base,
+      AV_ROUND_DOWN
+      );
+
     bool seenKeyframe = false;
     for (const auto &orig_pkt : encoder->getPacketBuffer()) {
       AVPacket *pkt = av_packet_clone(orig_pkt);
@@ -91,6 +106,10 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
         seenKeyframe = true;
       }
       if (!seenKeyframe && encoder->isVideo()) {
+        continue;
+      }
+      int64_t microseconds = av_rescale_q(pkt->pts, encoder->getCodecContext()->time_base, { 1, 1000000 });
+      if (microseconds < maximumUs) {
         continue;
       }
 
