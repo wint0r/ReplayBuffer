@@ -9,6 +9,7 @@
 #include <Geode/modify/EditLevelLayer.hpp>
 #include <Geode/modify/CCEGLViewProtocol.hpp>
 #include <Geode/modify/CCScheduler.hpp>
+#include <Geode/modify/EndLevelLayer.hpp>
 #include "AudioEncoder.hpp"
 #include "ReplayBuffer.hpp"
 #include "RBSettingsLayer.hpp"
@@ -133,6 +134,22 @@ class $modify(ReplayBuffer_CCScheduler, cocos2d::CCScheduler) {
   void update(float dt) override {
     CCScheduler::update(dt);
     Recorder::getInstance()->m_replayBuffer->update();
+  }
+};
+
+class $modify(ReplayBuffer_EndLevelLayer, EndLevelLayer) {
+  void customSetup() override {
+    auto *menu = this->getChildByID("button-menu");
+    if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
+      auto *sprite = CCSprite::createWithSpriteFrameName("GJ_shareBtn_001.png");
+      sprite->setScale(0.8f);
+      auto *button = CCMenuItemSpriteExtra::create(sprite, this, menu_selector(ReplayBuffer_EndLevelLayer::onClipButton));
+      menu->addChild(button);
+    }
+  }
+
+  void onClipButton(CCObject *) {
+    Recorder::getInstance()->clip();
   }
 };
 
