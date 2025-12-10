@@ -113,6 +113,7 @@ void VideoEncoder::threadProc() {
         this->pushPacket(m_packet);
       }
     }
+    Sleep(1);
   }
 }
 

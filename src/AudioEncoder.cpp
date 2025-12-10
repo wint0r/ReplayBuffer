@@ -112,6 +112,7 @@ void AudioEncoder::threadProc() {
         this->pushPacket(m_packet);
       }
     }
+    Sleep(1);
   }
 }
 

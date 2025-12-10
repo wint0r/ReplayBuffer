@@ -24,6 +24,8 @@ struct Timer {
   int64_t stop() const;
 };
 
+#define Sleep(x) std::this_thread::sleep_for(std::chrono::milliseconds(x))
+
 #endif
 
 #endif
