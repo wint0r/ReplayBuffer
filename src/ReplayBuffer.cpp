@@ -82,25 +82,18 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
     throw fmt::format("could not write header, error: {}", errStr);
   }
 
-  int64_t maximumUs = 0;
   for (auto &[idx, encoder] : m_encoders) {
-    int64_t pts = encoder->getMinimumPTS();
-    int64_t microseconds = av_rescale_q(pts, encoder->getCodecContext()->time_base, { 1, 1000000 });
-    if (microseconds > maximumUs) {
-      maximumUs = microseconds;
-    }
-  }
-
-  for (auto &[idx, encoder] : m_encoders) {
-    int64_t timestampOffset = av_rescale_q_rnd(
-      maximumUs,
-      { 1, 1000000 },
-      encoder->getCodecContext()->time_base,
-      AV_ROUND_DOWN
-      );
+    encoder->lockBuffer();
+    auto buffer = encoder->getPacketBuffer();
+    int64_t lastPTS = buffer.back()->pts;
+    int64_t lastUs = av_rescale_q(lastPTS, encoder->getCodecContext()->time_base, { 1, 1000000 });
+    int64_t maxDurationUs = av_rescale_q(encoder->getMaxDuration(), { 1, 1 }, { 1, 1000000 });
+    int64_t firstUs = lastUs - maxDurationUs;
+    //int64_t timestampOffset = av_rescale_q(firstUs, { 1, 1000000 }, encoder->getCodecContext()->time_base);
+    int64_t timestampOffset = buffer.front()->pts;
 
     bool seenKeyframe = false;
-    for (const auto &orig_pkt : encoder->getPacketBuffer()) {
+    for (const auto &orig_pkt : buffer) {
       AVPacket *pkt = av_packet_clone(orig_pkt);
       if (pkt->flags & AV_PKT_FLAG_KEY) {
         seenKeyframe = true;
@@ -109,7 +102,7 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
         continue;
       }
       int64_t microseconds = av_rescale_q(pkt->pts, encoder->getCodecContext()->time_base, { 1, 1000000 });
-      if (microseconds < maximumUs) {
+      if (microseconds < firstUs) {
         continue;
       }
 
@@ -152,6 +145,7 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
 
       av_packet_free(&pkt);
     }
+    encoder->unlockBuffer();
   }
 
   av_write_trailer(formatCtx);

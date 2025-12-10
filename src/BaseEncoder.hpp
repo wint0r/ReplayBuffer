@@ -2,6 +2,7 @@
 #define REPLAYBUFFER_BASEENCODER_HPP
 
 #include <thread>
+#include <mutex>
 #include "Timer.hpp"
 
 extern "C" {
@@ -26,6 +27,8 @@ protected:
   bool m_running;
   int m_maxDuration;
   std::deque<AVPacket *> m_packetBuffer;
+  std::mutex m_packetBufferMutex;
+  std::unique_lock<std::mutex> m_packetBufferLock;
 
   virtual void threadProc() = 0;
   void trimBuffer();
@@ -50,6 +53,8 @@ public:
   int getMaxDuration();
   AVCodecContext *getCodecContext();
   int64_t getMinimumPTS() const;
+  void lockBuffer();
+  void unlockBuffer();
 };
 
 

@@ -91,8 +91,11 @@ void VideoEncoder::threadProc() {
   int64_t lastFrameTime = m_timer.stop();
   while (m_running) {
     int64_t currentTime = m_timer.stop();
-    while (currentTime - lastFrameTime >= m_timeBaseUs) {
+    if (currentTime - lastFrameTime >= m_timeBaseUs) {
       lastFrameTime += m_timeBaseUs;
+      if (lastFrameTime > currentTime) {
+        lastFrameTime = currentTime;
+      }
 
       av_frame_make_writable(m_frame);
       sws_scale(m_swsCtx, swsInBuffer, stride, 0, m_srcHeight, m_frame->data, m_frame->linesize);
