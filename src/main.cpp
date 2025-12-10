@@ -141,11 +141,12 @@ class $modify(ReplayBuffer_EndLevelLayer, EndLevelLayer) {
   void customSetup() override {
     EndLevelLayer::customSetup();
 
-    auto *menu = this->getChildByID("button-menu");
+    auto *menu = this->m_sideMenu;
     if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
       auto *sprite = CCSprite::createWithSpriteFrameName("GJ_shareBtn_001.png");
-      sprite->setScale(0.8f);
+      sprite->setScale(0.5f);
       auto *button = CCMenuItemSpriteExtra::create(sprite, this, menu_selector(ReplayBuffer_EndLevelLayer::onClipButton));
+      button->setPosition(150, -90);
       menu->addChild(button);
     }
   }
