@@ -23,7 +23,7 @@ It's not on the Geode index yet, but hopefully soon.
 ## Known Issues
 - Any platform other than Windows is not supported right now
 - It's kinda unoptimised
-- The UI sucks
+- The UI literally uses ImGui because I can't be bothered to make good UI with cocos2d
 
 ## Credits
 Special thanks to foody for the icon

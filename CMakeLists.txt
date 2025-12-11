@@ -13,14 +13,14 @@ project(ReplayBuffer VERSION 1.0.0)
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_library(${PROJECT_NAME} SHARED ${SOURCES}
         src/Timer.cpp
-        src/RBSettingsLayer.cpp
         src/Recorder.cpp
         src/BaseEncoder.hpp
         src/BaseEncoder.cpp
         src/VideoEncoder.hpp
         src/VideoEncoder.cpp
         src/AudioEncoder.hpp
-        src/AudioEncoder.cpp)
+        src/AudioEncoder.cpp
+)
 
 if (NOT DEFINED ENV{GEODE_SDK})
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
@@ -85,7 +85,8 @@ elseif(APPLE)
     set(FFMPEG_INCLUDE_DIRS ${FFMPEG_INCLUDE_DIRS})
 endif()
 
+CPMAddPackage("gh:matcool/gd-imgui-cocos#geode")
 target_include_directories(${PROJECT_NAME} PRIVATE ${FFMPEG_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${FFMPEG_LIBRARIES} ${OTHER_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${FFMPEG_LIBRARIES} ${OTHER_LIBRARIES} imgui-cocos)
 
 setup_geode_mod(${PROJECT_NAME})

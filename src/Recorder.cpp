@@ -19,6 +19,9 @@ std::shared_ptr<Recorder> Recorder::getInstance() {
 }
 
 Result<> Recorder::start() {
+  if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
+    return Err("already recording");
+  }
   int width = Mod::get()->getSavedValue<int>("settings-width"_spr);
   int height = Mod::get()->getSavedValue<int>("settings-height"_spr);
   int framerate = Mod::get()->getSavedValue<int>("settings-framerate"_spr);
@@ -69,35 +72,33 @@ Result<> Recorder::start() {
     return Err(e);
   }
 
+  Mod::get()->setSavedValue<bool>("is-recording"_spr, true);
   return Ok();
 }
 
 void Recorder::stop() {
+  if (!Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
+    return;
+  }
+  Mod::get()->setSavedValue<bool>("is-recording"_spr, false);
   m_replayBuffer->stop();
 }
 
-void Recorder::clip() {
-  auto output_dir = Mod::get()->getSettingValue<std::filesystem::path>("output-dir");
+geode::Result<std::string> Recorder::clip() {
+  std::filesystem::path output_dir = Mod::get()->getSavedValue<std::string>("settings-output-dir"_spr);
   char buffer[80];
   std::time_t now = std::time(nullptr);
   std::tm* local_time = std::localtime(&now);
   std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H-%M-%S.mp4", local_time);
 
   if (Mod::get()->getSavedValue<bool>("is-recording"_spr)) {
+    auto path = output_dir / buffer;
     try {
-      auto path = output_dir / buffer;
       m_replayBuffer->saveToFile(path);
-      FLAlertLayer::create(
-        "Success",
-        fmt::format("Clip saved at {}", path.string()),
-        "OK"
-        )->show();
     } catch (const std::string &e) {
-      FLAlertLayer::create(
-        "Error while saving",
-        e,
-        "OK"
-        )->show();
+      return Err(e);
     }
+    return Ok(path.string());
   }
+  return Err("not recording?");
 }

@@ -12,16 +12,12 @@
 	"links": {
 		"source": "https://github.com/wint0r/ReplayBuffer"
 	},
-	"settings": {
-		"output-dir": {
-			"type": "folder",
-			"name": "Output Folder",
-			"default": "{temp_dir}"
-		}
-	},
 	"resources": {
 		"sprites": [
 			"resources/icon.png"
+		],
+		"files": [
+			"resources/inter.ttf"
 		]
 	}
 }
