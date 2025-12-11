@@ -26,7 +26,7 @@ protected:
   int64_t m_startTime;
   bool m_running;
   int m_maxDuration;
-  std::deque<AVPacket *> m_packetBuffer;
+  std::vector<AVPacket *> m_packetBuffer;
   std::mutex m_packetBufferMutex;
   std::unique_lock<std::mutex> m_packetBufferLock;
 
@@ -46,8 +46,9 @@ public:
   virtual void update() = 0;
   virtual bool isVideo() = 0;
 
-  AVPacket *popPacket();
-  const std::deque<AVPacket *> &getPacketBuffer();
+  void clearPacketBuffer();
+
+  const std::vector<AVPacket *> &getPacketBuffer();
   bool isPacketAvailable() const;
   void setMaxDuration(int duration);
   int getMaxDuration();

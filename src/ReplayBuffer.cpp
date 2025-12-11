@@ -32,9 +32,7 @@ void ReplayBuffer::update() {
 
 void ReplayBuffer::clear() {
   for (const auto &encoder: m_encoders | std::views::values) {
-    while (encoder->isPacketAvailable()) {
-      encoder->popPacket();
-    }
+    encoder->clearPacketBuffer();
   }
 }
 
@@ -82,30 +80,27 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
     throw fmt::format("could not write header, error: {}", errStr);
   }
 
+  // hack
+  int64_t lastPTS = m_encoders[0]->getPacketBuffer().back()->pts;
+  int64_t maxDurationPTS = av_rescale_q(m_encoders[0]->getMaxDuration(), { 1, 1 }, m_encoders[0]->getCodecContext()->time_base);
+  int64_t msOffsetBase = av_rescale_q(lastPTS - maxDurationPTS, m_encoders[0]->getCodecContext()->time_base, { 1, 1000 });
+
   for (auto &[idx, encoder] : m_encoders) {
     encoder->lockBuffer();
     auto buffer = encoder->getPacketBuffer();
-    int64_t lastPTS = buffer.back()->pts;
-    int64_t lastUs = av_rescale_q(lastPTS, encoder->getCodecContext()->time_base, { 1, 1000000 });
-    int64_t maxDurationUs = av_rescale_q(encoder->getMaxDuration(), { 1, 1 }, { 1, 1000000 });
-    int64_t firstUs = lastUs - maxDurationUs;
-    //int64_t timestampOffset = av_rescale_q(firstUs, { 1, 1000000 }, encoder->getCodecContext()->time_base);
-    int64_t timestampOffset = buffer.front()->pts;
+    int64_t timestampOffset = av_rescale_q(msOffsetBase, { 1, 1000 }, encoder->getCodecContext()->time_base);
+    timestampOffset = std::max(timestampOffset, encoder->getMinimumPTS());
 
     bool seenKeyframe = false;
     for (const auto &orig_pkt : buffer) {
-      AVPacket *pkt = av_packet_clone(orig_pkt);
-      if (pkt->flags & AV_PKT_FLAG_KEY) {
+      if (orig_pkt->flags & AV_PKT_FLAG_KEY) {
         seenKeyframe = true;
       }
-      if (!seenKeyframe && encoder->isVideo()) {
-        continue;
-      }
-      int64_t microseconds = av_rescale_q(pkt->pts, encoder->getCodecContext()->time_base, { 1, 1000000 });
-      if (microseconds < firstUs) {
+      if ((!seenKeyframe && encoder->isVideo()) || orig_pkt->pts < timestampOffset) {
         continue;
       }
 
+      AVPacket *pkt = av_packet_clone(orig_pkt);
       int oldStreamIdx = idx;
       int newStreamIdx = streamMapping[oldStreamIdx];
       int64_t offset = timestampOffset;

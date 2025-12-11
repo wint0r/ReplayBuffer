@@ -3,12 +3,15 @@
 #include <ranges>
 
 void BaseEncoder::trimBuffer() {
-  int64_t maxDurationPts = av_rescale_q(m_maxDuration, { 1, 1 }, m_codecCtx->time_base);
+  int64_t maxDurationPts = av_rescale_q(m_maxDuration + 1, { 1, 1 }, m_codecCtx->time_base);
   int64_t cutoff = m_packetBuffer.back()->pts - maxDurationPts;
 
-  while (m_packetBuffer.front()->pts <= cutoff) {
-    av_packet_free(&m_packetBuffer.front());
-    m_packetBuffer.pop_front();
+  for (auto it = m_packetBuffer.begin(); it != m_packetBuffer.end();) {
+    if ((*it)->pts < cutoff) {
+      it = m_packetBuffer.erase(it);
+    } else {
+      ++it;
+    }
   }
 }
 
@@ -42,13 +45,14 @@ void BaseEncoder::joinThread() {
   m_thread.join();
 }
 
-AVPacket *BaseEncoder::popPacket() {
-  AVPacket *pkt = m_packetBuffer.front();
-  m_packetBuffer.pop_front();
-  return pkt;
+void BaseEncoder::clearPacketBuffer() {
+  for (auto &packet : m_packetBuffer) {
+    av_packet_free(&packet);
+  }
+  m_packetBuffer.clear();
 }
 
-const std::deque<AVPacket *> & BaseEncoder::getPacketBuffer() {
+const std::vector<AVPacket *> &BaseEncoder::getPacketBuffer() {
   return m_packetBuffer;
 }
 

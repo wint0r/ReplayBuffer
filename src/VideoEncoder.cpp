@@ -33,6 +33,7 @@ void VideoEncoder::destroy() {
 
 void VideoEncoder::start() {
   BaseEncoder::start();
+  m_lastFrameTime = m_startTime;
 }
 
 void VideoEncoder::stop() {
@@ -91,11 +92,8 @@ void VideoEncoder::threadProc() {
   int64_t lastFrameTime = m_timer.stop();
   while (m_running) {
     int64_t currentTime = m_timer.stop();
-    if (currentTime - lastFrameTime >= m_timeBaseUs) {
+    while (currentTime - lastFrameTime >= m_timeBaseUs) {
       lastFrameTime += m_timeBaseUs;
-      if (lastFrameTime > currentTime) {
-        lastFrameTime = currentTime;
-      }
 
       av_frame_make_writable(m_frame);
       sws_scale(m_swsCtx, swsInBuffer, stride, 0, m_srcHeight, m_frame->data, m_frame->linesize);
@@ -116,7 +114,6 @@ void VideoEncoder::threadProc() {
         this->pushPacket(m_packet);
       }
     }
-    Sleep(1);
   }
 }
 
@@ -149,18 +146,17 @@ void VideoEncoder::initCodecContext() {
   m_codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
   m_codecCtx->time_base = {1, m_dstFramerate};
   m_codecCtx->framerate = {m_dstFramerate, 1};
-  m_codecCtx->gop_size = 60;
+  m_codecCtx->gop_size = 60 ;
   m_codecCtx->max_b_frames = 1;
   if (!m_isUsingGPU) {
     av_opt_set(m_codecCtx->priv_data, "tune", "zerolatency", 0);
-    av_opt_set(m_codecCtx->priv_data, "preset", "ultrafast", 0);
+    av_opt_set(m_codecCtx->priv_data, "preset", "veryfast", 0);
   } else {
     if (m_encoderName.ends_with("nvenc")) {
       av_opt_set(m_codecCtx->priv_data, "preset", "p3", 0);
       av_opt_set(m_codecCtx->priv_data, "tune", "ull", 0);
     } else if (m_encoderName.ends_with("amf")) {
-      av_opt_set(m_codecCtx->priv_data, "usage", "webcam", 0);
-      av_opt_set(m_codecCtx->priv_data, "preset", "speed", 0);
+      av_opt_set(m_codecCtx->priv_data, "quality", "speed", 0);
     } else if (m_encoderName.ends_with("qsv")) {
       av_opt_set(m_codecCtx->priv_data, "preset", "veryfast", 0);
       // there could be something i'm missing here
