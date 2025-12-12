@@ -134,10 +134,11 @@ class $modify(ReplayBuffer_EndLevelLayer, EndLevelLayer) {
 
     auto *menu = this->m_sideMenu;
     auto *button = CCMenuItemSpriteExtra::create(
-      CircleButtonSprite::createWithSprite("icon.png"_spr, 0.5),
+      CircleButtonSprite::createWithSprite("icon.png"_spr, 0.8),
       this,
       menu_selector(ReplayBuffer_EndLevelLayer::onSettingsButton)
       );
+    button->setScale(0.75);
     button->setPosition(150, -90);
     menu->addChild(button);
   }
