@@ -6,12 +6,9 @@ void BaseEncoder::trimBuffer() {
   int64_t maxDurationPts = av_rescale_q(m_maxDuration + 1, { 1, 1 }, m_codecCtx->time_base);
   int64_t cutoff = m_packetBuffer.back()->pts - maxDurationPts;
 
-  for (auto it = m_packetBuffer.begin(); it != m_packetBuffer.end();) {
-    if ((*it)->pts < cutoff) {
-      it = m_packetBuffer.erase(it);
-    } else {
-      ++it;
-    }
+  while (m_packetBuffer.front()->pts < cutoff) {
+    av_packet_free(&m_packetBuffer.front());
+    m_packetBuffer.pop_front();
   }
 }
 
@@ -24,8 +21,7 @@ void BaseEncoder::pushPacket(AVPacket *pkt) {
 
 BaseEncoder::BaseEncoder() : m_codec(nullptr), m_codecCtx(nullptr), m_frame(nullptr), m_packet(nullptr), m_startTime(0),
                              m_running(false),
-                             m_maxDuration(0), m_packetBufferLock(m_packetBufferMutex) {
-  m_packetBufferLock.unlock();
+                             m_maxDuration(0) {
 }
 
 BaseEncoder::~BaseEncoder() {
@@ -52,7 +48,7 @@ void BaseEncoder::clearPacketBuffer() {
   m_packetBuffer.clear();
 }
 
-const std::vector<AVPacket *> &BaseEncoder::getPacketBuffer() {
+const std::deque<AVPacket *> &BaseEncoder::getPacketBuffer() {
   return m_packetBuffer;
 }
 
@@ -90,9 +86,9 @@ int64_t BaseEncoder::getMinimumPTS() const {
 }
 
 void BaseEncoder::lockBuffer() {
-  m_packetBufferLock.lock();
+  m_packetBufferMutex.lock();
 }
 
 void BaseEncoder::unlockBuffer() {
-  m_packetBufferLock.unlock();
+  m_packetBufferMutex.unlock();
 }

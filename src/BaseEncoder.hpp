@@ -26,9 +26,8 @@ protected:
   int64_t m_startTime;
   bool m_running;
   int m_maxDuration;
-  std::vector<AVPacket *> m_packetBuffer;
+  std::deque<AVPacket *> m_packetBuffer;
   std::mutex m_packetBufferMutex;
-  std::unique_lock<std::mutex> m_packetBufferLock;
 
   virtual void threadProc() = 0;
   void trimBuffer();
@@ -48,7 +47,7 @@ public:
 
   void clearPacketBuffer();
 
-  const std::vector<AVPacket *> &getPacketBuffer();
+  const std::deque<AVPacket *> &getPacketBuffer();
   bool isPacketAvailable() const;
   void setMaxDuration(int duration);
   int getMaxDuration();
