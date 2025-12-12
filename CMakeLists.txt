@@ -34,7 +34,7 @@ if(ANDROID)
     find_package(ffmpeg REQUIRED)
 elseif(WIN32)
     if(NOT DEFINED FFMPEG_ROOT)
-        set(FFMPEG_ROOT "D:/ffmpeg-prebuilt" CACHE PATH "Path to FFmpeg from gyan.dev")
+        set(FFMPEG_ROOT "D:/ffmpeg-prebuilt" CACHE PATH "Path to FFmpeg")
     endif()
 
     set(FFMPEG_INCLUDE_DIRS "${FFMPEG_ROOT}/include")

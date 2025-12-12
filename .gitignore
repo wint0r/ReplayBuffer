@@ -59,10 +59,9 @@ rel-build/
 
 # Visual Studio
 .vs/
+out/
+CMakeSettings.json
 
 # CLion
 .idea/
 /cmake-build-*/
-
-# conan
-CMakeUserPresets.json
