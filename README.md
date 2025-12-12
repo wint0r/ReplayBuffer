@@ -1,10 +1,7 @@
 # Replay Buffer
 
-## How to use
-You first set the output directory in the mod's settings (or leave it as the temp folder, works either way) 
-and then go to the main menu (or pause menu) and click on the mod's icon. From there, you set your settings and for the 
-audio settings, you take a look at the available audio device IDs by clicking the top right corner button. And then you 
-press save settings, and start recording!
+## Usage
+To set up the mod, click on the mod's icon (wherever it is), set the values for the output file, and then click save. To record, press start recording, play the game as per usual, and then press clip.
 
 ## Building from source (Windows)
 You must first build ffmpeg as static libraries, with NVENC and AMF support if you want (or contact me for a build).
