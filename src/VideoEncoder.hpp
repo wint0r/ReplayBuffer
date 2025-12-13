@@ -36,7 +36,6 @@ protected:
   void threadProc() override;
 
 private:
-  void initSwsContext();
   void initCodecContext();
   void destroyCodecContext();
   void reinitCodecContext();

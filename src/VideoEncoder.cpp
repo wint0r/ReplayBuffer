@@ -1,4 +1,5 @@
 #include "VideoEncoder.hpp"
+#include <libyuv.h>
 
 VideoEncoder::VideoEncoder() : m_hwDeviceCtx(nullptr), m_swsCtx(nullptr), m_srcWidth(0), m_srcHeight(0), m_dstWidth(0),
                                m_dstHeight(0),
@@ -15,7 +16,6 @@ VideoEncoder::~VideoEncoder() {
 }
 
 void VideoEncoder::init() {
-  this->initSwsContext();
   this->initCodecContext();
 }
 
@@ -84,11 +84,6 @@ const AVCodec *VideoEncoder::detectCodec() {
 void VideoEncoder::threadProc() {
   int64_t pts = 0;
 
-  uint8_t *swsInBuffer[] = { m_pixelBufferManager->getCurrentFrame() };
-  int stride[] = { m_srcWidth * 4 };
-  swsInBuffer[0] += static_cast<size_t>(m_srcHeight - 1) * stride[0];
-  stride[0] *= -1;
-
   int64_t lastFrameTime = m_timer.stop();
   while (m_running) {
     int64_t currentTime = m_timer.stop();
@@ -96,7 +91,12 @@ void VideoEncoder::threadProc() {
       lastFrameTime += m_timeBaseUs;
 
       av_frame_make_writable(m_frame);
-      sws_scale(m_swsCtx, swsInBuffer, stride, 0, m_srcHeight, m_frame->data, m_frame->linesize);
+
+      uint8_t* inputBuffer = m_pixelBufferManager->getCurrentFrame();
+      int stride = m_srcWidth * 4;
+      inputBuffer += static_cast<size_t>(m_srcHeight - 1) * stride;
+      stride *= -1;
+      libyuv::ABGRToI420(inputBuffer, stride, m_frame->data[0], m_dstWidth, m_frame->data[1], (m_dstWidth + 1) / 2, m_frame->data[2], (m_dstWidth + 1) / 2, m_srcWidth, m_srcHeight);
       m_frame->pts = pts++;
 
       int ret = avcodec_send_frame(m_codecCtx, m_frame);
@@ -116,21 +116,6 @@ void VideoEncoder::threadProc() {
     }
     Sleep(1);
   }
-}
-
-void VideoEncoder::initSwsContext() {
-  this->m_swsCtx = sws_getContext(
-    m_srcWidth,
-    m_srcHeight,
-    AV_PIX_FMT_RGBA,
-    m_dstWidth,
-    m_dstHeight,
-    AV_PIX_FMT_YUV420P,
-    SWS_FAST_BILINEAR,
-    nullptr,
-    nullptr,
-    nullptr
-    );
 }
 
 void VideoEncoder::initCodecContext() {
@@ -223,14 +208,6 @@ void VideoEncoder::setSrcResolution(int width, int height) {
   m_srcWidth = width;
   m_srcHeight = height;
   this->m_pixelBufferManager->changeSize(width, height);
-  if (!m_swsCtx) {
-    return;
-  }
-  if (m_running) {
-    this->stop();
-    this->joinThread();
-  }
-  this->initSwsContext();
 }
 
 void VideoEncoder::setDstResolution(int width, int height) {

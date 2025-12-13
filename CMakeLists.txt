@@ -47,6 +47,7 @@ elseif(WIN32)
     find_library(SWRESAMPLE_LIBRARY swresample PATHS ${FFMPEG_LIB_DIR} REQUIRED)
     find_library(AVFILTER_LIBRARY avfilter PATHS ${FFMPEG_LIB_DIR} REQUIRED)
     find_library(X264_LIBRARY libx264 PATHS ${FFMPEG_LIB_DIR} REQUIRED)
+    find_library(LIBYUV_LIBRARY yuv PATHS ${FFMPEG_LIB_DIR} REQUIRED) # TODO: separate this
 
     set(FFMPEG_LIBRARIES
             ${AVCODEC_LIBRARY}
@@ -59,6 +60,7 @@ elseif(WIN32)
     )
 
     set(OTHER_LIBRARIES
+            ${LIBYUV_LIBRARY}
             ws2_32
             secur32
             strmiids
