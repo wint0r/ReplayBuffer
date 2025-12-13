@@ -52,7 +52,8 @@ void AudioEncoder::threadProc() {
   int64_t pts = 0;
   AVAudioFifo *fifo = av_audio_fifo_alloc(AV_SAMPLE_FMT_FLTP, 2, m_codecCtx->frame_size);
   uint8_t *swrInBuf[] = { reinterpret_cast<uint8_t *>(m_fmodBuffer.data()) };
-
+  m_recordPos = 0;
+  m_lastRecordPos = 0;
   while (m_running) {
     system->getRecordPosition(m_fmodDeviceID, &m_recordPos);
     if (m_recordPos < 0) {
