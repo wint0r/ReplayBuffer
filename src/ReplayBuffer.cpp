@@ -89,7 +89,7 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
     encoder->lockBuffer();
     auto buffer = encoder->getPacketBuffer();
     int64_t timestampOffset = av_rescale_q(usOffsetBase, { 1, 1000000 }, encoder->getCodecContext()->time_base);
-    //timestampOffset = std::max(timestampOffset, encoder->getMinimumPTS());
+   /timestampOffset = std::max(timestampOffset, 0ll);
 
     bool seenKeyframe = false;
     for (const auto &orig_pkt : buffer) {
