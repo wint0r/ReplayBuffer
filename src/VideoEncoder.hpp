@@ -17,6 +17,7 @@ class VideoEncoder : public BaseEncoder {
   int64_t m_timeBaseUs;
   int64_t m_dstBitrate;
   std::unique_ptr<PixelBufferManager> m_pixelBufferManager;
+  std::vector<uint8_t> m_scaleBuffer;
 
 public:
   VideoEncoder();
@@ -39,6 +40,7 @@ private:
   void initCodecContext();
   void destroyCodecContext();
   void reinitCodecContext();
+  void reallocateScaleBuffer();
 
 public:
   void setSrcResolution(int width, int height);

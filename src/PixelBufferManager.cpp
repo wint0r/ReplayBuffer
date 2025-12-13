@@ -18,7 +18,7 @@ PixelBufferManager::~PixelBufferManager() {
 
 void PixelBufferManager::captureFrame() {
   glBindBuffer(GL_PIXEL_PACK_BUFFER, m_pbos[m_pboIdx]);
-  glReadPixels(0, 0, m_frameWidth, m_frameHeight, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  glReadPixels(0, 0, m_frameWidth, m_frameHeight, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
   glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
   m_pboIdx = m_pboIdx ^ 1;
 

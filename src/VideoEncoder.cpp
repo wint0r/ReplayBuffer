@@ -17,6 +17,7 @@ VideoEncoder::~VideoEncoder() {
 
 void VideoEncoder::init() {
   this->initCodecContext();
+  this->reallocateScaleBuffer();
 }
 
 void VideoEncoder::destroy() {
@@ -83,6 +84,7 @@ const AVCodec *VideoEncoder::detectCodec() {
 
 void VideoEncoder::threadProc() {
   int64_t pts = 0;
+  uint8_t* inputBuffer = m_pixelBufferManager->getCurrentFrame();
 
   int64_t lastFrameTime = m_timer.stop();
   while (m_running) {
@@ -92,11 +94,25 @@ void VideoEncoder::threadProc() {
 
       av_frame_make_writable(m_frame);
 
-      uint8_t* inputBuffer = m_pixelBufferManager->getCurrentFrame();
-      int stride = m_srcWidth * 4;
-      inputBuffer += static_cast<size_t>(m_srcHeight - 1) * stride;
-      stride *= -1;
-      libyuv::ABGRToI420(inputBuffer, stride, m_frame->data[0], m_dstWidth, m_frame->data[1], (m_dstWidth + 1) / 2, m_frame->data[2], (m_dstWidth + 1) / 2, m_srcWidth, m_srcHeight);
+      if (m_srcWidth != m_dstWidth || m_srcHeight != m_dstHeight) {
+        libyuv::ARGBScale(inputBuffer, m_srcWidth * 4,
+          m_srcWidth, m_srcHeight,
+          m_scaleBuffer.data(), m_dstWidth * 4,
+          m_dstWidth, m_dstHeight,
+          libyuv::FilterMode::kFilterNone);
+
+        libyuv::ARGBToI420(m_scaleBuffer.data(), m_dstWidth * 4,
+          m_frame->data[0], m_dstWidth,
+          m_frame->data[1], (m_dstWidth + 1) / 2,
+          m_frame->data[2], (m_dstWidth + 1) / 2,
+          m_dstWidth, -m_dstHeight);
+      } else {
+        libyuv::ARGBToI420(inputBuffer, m_srcWidth * 4,
+          m_frame->data[0], m_srcWidth,
+          m_frame->data[1], (m_srcWidth + 1) / 2,
+          m_frame->data[2], (m_srcWidth + 1) / 2,
+          m_srcWidth, -m_srcHeight);
+      }
       m_frame->pts = pts++;
 
       int ret = avcodec_send_frame(m_codecCtx, m_frame);
@@ -124,7 +140,7 @@ void VideoEncoder::initCodecContext() {
   if (m_isUsingGPU) {
     av_buffer_unref(&m_hwDeviceCtx);
   }
-
+  
   m_codecCtx = avcodec_alloc_context3(m_codec);
   m_codecCtx->bit_rate = m_dstBitrate;
   m_codecCtx->width = m_dstWidth;
@@ -132,7 +148,7 @@ void VideoEncoder::initCodecContext() {
   m_codecCtx->pix_fmt = AV_PIX_FMT_YUV420P;
   m_codecCtx->time_base = {1, m_dstFramerate};
   m_codecCtx->framerate = {m_dstFramerate, 1};
-  m_codecCtx->gop_size = 60 ;
+  m_codecCtx->gop_size = 60;
   m_codecCtx->max_b_frames = 1;
   if (!m_isUsingGPU) {
     av_opt_set(m_codecCtx->priv_data, "tune", "zerolatency", 0);
@@ -201,6 +217,10 @@ void VideoEncoder::reinitCodecContext() {
   this->initCodecContext();
 }
 
+void VideoEncoder::reallocateScaleBuffer() {
+  m_scaleBuffer.resize(m_dstWidth * m_dstHeight * 4);
+}
+
 void VideoEncoder::setSrcResolution(int width, int height) {
   if (m_srcWidth == width && m_srcHeight == height) {
     return;
@@ -214,6 +234,7 @@ void VideoEncoder::setDstResolution(int width, int height) {
   m_dstWidth = width;
   m_dstHeight = height;
   this->reinitCodecContext();
+  this->reallocateScaleBuffer();
 }
 
 void VideoEncoder::setUsingGPU(bool isGPU) {
