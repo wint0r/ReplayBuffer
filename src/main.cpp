@@ -249,7 +249,7 @@ $on_mod(Loaded) {
       bool isRecording = Mod::get()->getSavedValue<bool>("is-recording"_spr);
       if (isRecording) {
         ImGui::BeginDisabled(true);
-        ImGui::Button("save");
+        ImGui::Button("save settings");
         ImGui::EndDisabled();
         ImGui::SameLine();
         if (ImGui::Button("stop recording")) {
@@ -288,6 +288,7 @@ $on_mod(Loaded) {
           for (int i = 1; i <= audioTrackAmount; i++) {
             Mod::get()->setSavedValue<int>("settings-audio-id-"_spr + std::to_string(i), audioTracks[i - 1]);
           }
+          Mod::get()->setSavedValue<std::string>("settings-output-dir"_spr, std::string(outputDir.data()));
         }
         ImGui::SameLine();
         if (ImGui::Button("start recording")) {
