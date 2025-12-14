@@ -85,10 +85,10 @@ int64_t BaseEncoder::getMinimumPTS() const {
   return std::min((*ptsMin)->pts, (*dtsMin)->dts);
 }
 
-void BaseEncoder::lockBuffer() {
-  m_packetBufferMutex.lock();
-}
+//void BaseEncoder::lockBuffer() {
+//  m_packetBufferMutex.lock();
+//}
 
-void BaseEncoder::unlockBuffer() {
-  m_packetBufferMutex.unlock();
-}
+//void BaseEncoder::unlockBuffer() {
+//  m_packetBufferMutex.unlock();
+//}
