@@ -114,7 +114,7 @@ void VideoEncoder::threadProc() {
         this->pushPacket(m_packet);
       }
     }
-    Sleep(1);
+    std::this_thread::yield();
   }
 }
 
