@@ -113,7 +113,7 @@ void AudioEncoder::threadProc() {
         this->pushPacket(m_packet);
       }
     }
-    Sleep(100);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
 
