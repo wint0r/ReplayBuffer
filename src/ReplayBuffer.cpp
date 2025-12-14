@@ -80,19 +80,22 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
     throw fmt::format("could not write header, error: {}", errStr);
   }
 
-  // hack
+  // hack: assuming encoder at stream 0 is *always* a video encoder
   int64_t lastPTS = m_encoders[0]->getPacketBuffer().back()->pts;
   int64_t maxDurationPTS = av_rescale_q(m_encoders[0]->getMaxDuration(), { 1, 1 }, m_encoders[0]->getCodecContext()->time_base);
   int64_t usOffsetBase = av_rescale_q(lastPTS - maxDurationPTS, m_encoders[0]->getCodecContext()->time_base, { 1, 1000000 });
 
   for (auto &[idx, encoder] : m_encoders) {
-    encoder->lockBuffer();
+    //encoder->lockBuffer();
     auto buffer = encoder->getPacketBuffer();
     int64_t timestampOffset = av_rescale_q(usOffsetBase, { 1, 1000000 }, encoder->getCodecContext()->time_base);
     timestampOffset = std::max(timestampOffset, 0ll);
 
     bool seenKeyframe = false;
     for (const auto &orig_pkt : buffer) {
+      if (!orig_pkt) {
+        continue; // hack 2: if it doesn't exist we just ignore it
+      }
       if (orig_pkt->flags & AV_PKT_FLAG_KEY) {
         seenKeyframe = true;
       }
@@ -140,7 +143,7 @@ void ReplayBuffer::saveToFile(const std::filesystem::path &filename) {
 
       av_packet_free(&pkt);
     }
-    encoder->unlockBuffer();
+    //encoder->unlockBuffer();
   }
 
   av_write_trailer(formatCtx);
