@@ -267,7 +267,7 @@ $on_mod(Loaded) {
           }
         }
       } else {
-        if (ImGui::Button("save")) {
+        if (ImGui::Button("save settings")) {
           int audioTrackAmount = Mod::get()->getSavedValue<int>("settings-audio-amt"_spr);
           if (outputTrackCount != audioTrackAmount) {
             audioTracks.resize(outputTrackCount);
