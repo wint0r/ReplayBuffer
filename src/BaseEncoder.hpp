@@ -53,8 +53,8 @@ public:
   int getMaxDuration();
   AVCodecContext *getCodecContext();
   int64_t getMinimumPTS() const;
-  void lockBuffer();
-  void unlockBuffer();
+  //void lockBuffer();
+  //void unlockBuffer();
 };
 
 

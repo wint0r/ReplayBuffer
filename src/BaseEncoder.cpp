@@ -13,7 +13,7 @@ void BaseEncoder::trimBuffer() {
 }
 
 void BaseEncoder::pushPacket(AVPacket *pkt) {
-  std::lock_guard lock(m_packetBufferMutex);
+  //std::lock_guard lock(m_packetBufferMutex); // praying commenting this doesn't crash the game randomly
   m_packetBuffer.push_back(av_packet_clone(pkt));
   av_packet_unref(pkt);
   this->trimBuffer();
@@ -85,10 +85,10 @@ int64_t BaseEncoder::getMinimumPTS() const {
   return std::min((*ptsMin)->pts, (*dtsMin)->dts);
 }
 
-void BaseEncoder::lockBuffer() {
-  m_packetBufferMutex.lock();
-}
+//void BaseEncoder::lockBuffer() {
+//  m_packetBufferMutex.lock();
+//}
 
-void BaseEncoder::unlockBuffer() {
-  m_packetBufferMutex.unlock();
-}
+//void BaseEncoder::unlockBuffer() {
+//  m_packetBufferMutex.unlock();
+//}
